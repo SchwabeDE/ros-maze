@@ -84,6 +84,10 @@ class Robot:
                     bestScore = scoreSum
         self.absoluteIdxBestDatapoint = self.datapointGroups[idxBestScore][1] + len(self.datapointGroups[idxBestScore][0])/2
 
+    def calcRotationForBestDatapoint(self):
+
+        return (self.absoluteIdxBestDatapoint - 179) * 0.5
+
 
     def startRobot(self):
         rospy.loginfo("start")
@@ -95,9 +99,11 @@ class Robot:
 
                 self.classifyDatapoints()
                 self.getAbsoluteIdxBestDatapoint()
+                rotDegree = self.calcRotationForBestDatapoint()
                 #rospy.loginfo(self.datapointGroups[self.idxBestScore])
                 #rospy.loginfo("Best score idx:" + str(self.idxBestScore))
                 #rospy.loginfo("absoluteIdxBestDatapoint:" + str(self.absoluteIdxBestDatapoint))
+                #rospy.loginfo("rotDegree: " + str(rotDegree))
                 return
 
 
