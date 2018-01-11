@@ -4,8 +4,8 @@
 import rospy
 
 # import messages
-'''example'''
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 
 
@@ -17,28 +17,37 @@ class Robot:
 
         # Subscriber
         rospy.Subscriber('/odom', Odometry, self.odomCallback)
+        rospy.Subscriber('/laserscan', LaserScan, self.laserCallback)
 
         # Publisher
         self.velPub = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=5)
 
         # Member variables
         self.vel = Twist()
-        self.odom_x = 0
+        self.odom = 0
+        self.laser = 0
 
     def odomCallback(self, data):
-        pass
-        #TODO implement callback
+        '''
+        Get relevant odom data (relevant sublists: position(x,y) and orientation(x,y,z,w)).
+        :param data: 
+        :return: position(x,y) and orientation(x,y,z,w)
+        '''
+        self.odom = data.pose.pose
 
-    # TODO maze runner algorithm
+    def laserCallback(self, data):
+        '''
+        Get relevant laserscan data (relevant sublist: ranges).
+        :param data: 
+        :return: ranges
+        '''
+        self.laser = data.ranges
+
     def startRobot(self):
         rospy.loginfo("start")
 
         while not rospy.is_shutdown():
-
-            #rospy.loginfo(self.odom_x)
-
-            #self.vel.linear.x = 0.1
-            #self.velPub.publish(self.vel)
+            rospy.loginfo(self.laser)
 
             # sleep to prevent flooding your console
             self.rate.sleep()
