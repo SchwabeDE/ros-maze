@@ -29,6 +29,7 @@ class Robot:
 
         self.phase = "SearchApproachWall"
         self.datapointGroups = []
+        self.absoluteIdxBestDatapoint = -1
 
     def odomCallback(self, data):
         '''
@@ -65,7 +66,23 @@ class Robot:
                 dpGroup = [rangeList, idx-len(rangeList), avg, std]
                 self.datapointGroups.append(dpGroup)
                 rangeList = []
-        self.datapointGroups.append(len(self.laser))
+
+    def getAbsoluteIdxBestDatapoint(self, minPointsThreshold=20):
+
+        bestScore = 0
+        idxBestScore = 0
+        for idx, datapointGroup in enumerate(self.datapointGroups):
+            if(len(datapointGroup[0]) >= minPointsThreshold):
+                scoreLen = len(datapointGroup[0])/float(len(self.laser))
+                scoreAvg = datapointGroup[2]/max(self.laser)
+                scoreStd = 1.0 - datapointGroup[3]
+                scoreSum = scoreLen + scoreAvg + scoreStd
+                #rospy.loginfo("scoreSum: " + str(scoreSum))
+
+                if(scoreSum > bestScore):
+                    idxBestScore = idx
+                    bestScore = scoreSum
+        self.absoluteIdxBestDatapoint = self.datapointGroups[idxBestScore][1] + len(self.datapointGroups[idxBestScore][0])/2
 
 
     def startRobot(self):
@@ -77,6 +94,11 @@ class Robot:
                     rospy.loginfo("Wait for laser data..")
 
                 self.classifyDatapoints()
+                self.getAbsoluteIdxBestDatapoint()
+                #rospy.loginfo(self.datapointGroups[self.idxBestScore])
+                #rospy.loginfo("Best score idx:" + str(self.idxBestScore))
+                #rospy.loginfo("absoluteIdxBestDatapoint:" + str(self.absoluteIdxBestDatapoint))
+                return
 
 
             elif(self.phase == "FollowWall"):
