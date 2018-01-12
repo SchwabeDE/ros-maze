@@ -14,7 +14,7 @@ class Robot:
     # initialise your node, publisher and subscriber as well as some member variables
     def __init__(self):
         rospy.init_node('maze')
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(20)
 
         # Subscriber
         rospy.Subscriber('/odom', Odometry, self.odomCallback)
@@ -28,6 +28,10 @@ class Robot:
         self.odom = []
         self.laser = []
 
+        # Settings
+        self.WALLDISTANCE = 0.8
+
+        # Phases
         self.phase = "SearchApproachWall"
         self.datapointGroups = []
         self.absoluteIdxBestDatapoint = -1
@@ -104,7 +108,6 @@ class Robot:
 
         return yawDegree
 
-
     def turnDegree(self, requestTurnDegree, speed, threshold=0.0):
 
         overflow = False
@@ -152,6 +155,24 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
+    def moveStraightBeforeWall(self, speed, datapoints=2):
+
+        def getAvgRelevantDatapoints():
+            listMiddle = len(self.laser) / 2
+            relevantDatapoints = self.laser[listMiddle - (datapoints / 2): listMiddle + (datapoints / 2)]
+            return sum(relevantDatapoints) / float(len(relevantDatapoints))
+
+        while(True):
+            avgDist = getAvgRelevantDatapoints()
+            #rospy.loginfo("avgDist: " + str(avgDist))
+            if(avgDist <= self.WALLDISTANCE):
+                self.vel.linear.x = 0.0
+                self.velPub.publish(self.vel)
+                return
+            else:
+                self.vel.linear.x = speed
+                self.velPub.publish(self.vel)
+
     def startRobot(self):
         rospy.loginfo("start")
 
@@ -166,6 +187,7 @@ class Robot:
                 #rospy.loginfo("rotDegree: " + str(rotDegree))
                 #rospy.loginfo("Yaw: " + str(self.getCurrYawDegree()))
                 self.turnDegree(rotDegree, 0.2)
+                self.moveStraightBeforeWall(0.3)
 
 
                 #rospy.loginfo(self.datapointGroups[self.idxBestScore])
