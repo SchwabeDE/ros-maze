@@ -7,6 +7,7 @@ import rospy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
+from tf.transformations import euler_from_quaternion
 
 
 class Robot:
@@ -88,18 +89,85 @@ class Robot:
 
         return (self.absoluteIdxBestDatapoint - 179) * 0.5
 
+    def getCurrYawDegree(self):
+        orientation = self.odom.orientation
+        orientationList = [orientation.x, orientation.y, orientation.z, orientation.w]
+        # rad from quaternion
+        (roll, pitch, yaw) = euler_from_quaternion(orientationList)
+        # degree from rad
+        pi = 3.14159265359
+        yawDegree = (180 / pi) * yaw
+
+        # transform [-180;180] degree into [0;359]
+        if (yawDegree < 0):
+            yawDegree = 359 + yawDegree
+
+        return yawDegree
+
+
+    def turnDegree(self, requestTurnDegree, speed, threshold=0.0):
+
+        overflow = False
+        fluctuationTheshold = 10
+        currYawDegree = self.getCurrYawDegree()
+        prevYawDegree = currYawDegree
+        degreeTarget = currYawDegree + requestTurnDegree
+
+        if(requestTurnDegree > 0):
+            while(currYawDegree < degreeTarget):
+                prevYawDegree = currYawDegree
+                if(overflow):
+                    currYawDegree = self.getCurrYawDegree() + 359
+                else:
+                    currYawDegree = self.getCurrYawDegree()
+
+                self.vel.angular.z = speed
+                self.velPub.publish(self.vel)
+
+                if(currYawDegree+fluctuationTheshold < prevYawDegree):
+                    overflow = True
+
+                #rospy.loginfo("TURN POS")
+                #rospy.loginfo("currYawDegree: " + str(currYawDegree))
+                #rospy.loginfo("degreeTarget: " + str(degreeTarget))
+
+        elif(requestTurnDegree < 0):
+            while(currYawDegree > degreeTarget):
+                prevYawDegree = currYawDegree
+                if(overflow):
+                    currYawDegree = self.getCurrYawDegree() - 360
+                else:
+                    currYawDegree = self.getCurrYawDegree()
+
+                self.vel.angular.z = speed * -1
+                self.velPub.publish(self.vel)
+
+                if(currYawDegree-fluctuationTheshold > prevYawDegree):
+                    overflow = True
+        else:
+            #nothing to do
+            rospy.loginfo("nothing to do")
+            return
+
+        self.vel.angular.z = 0.0
+        self.velPub.publish(self.vel)
 
     def startRobot(self):
         rospy.loginfo("start")
 
         while not rospy.is_shutdown():
             if(self.phase == "SearchApproachWall"):
-                while not (self.laser):
-                    rospy.loginfo("Wait for laser data..")
+                while not (self.laser and self.odom):
+                    rospy.loginfo("Wait for laser and odom data..")
 
                 self.classifyDatapoints()
                 self.getAbsoluteIdxBestDatapoint()
                 rotDegree = self.calcRotationForBestDatapoint()
+                #rospy.loginfo("rotDegree: " + str(rotDegree))
+                #rospy.loginfo("Yaw: " + str(self.getCurrYawDegree()))
+                self.turnDegree(rotDegree, 0.2)
+
+
                 #rospy.loginfo(self.datapointGroups[self.idxBestScore])
                 #rospy.loginfo("Best score idx:" + str(self.idxBestScore))
                 #rospy.loginfo("absoluteIdxBestDatapoint:" + str(self.absoluteIdxBestDatapoint))
