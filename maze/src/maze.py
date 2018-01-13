@@ -38,6 +38,8 @@ class Robot:
         # Phases
         self.phase = "SearchApproachWall"
 
+    "SUBSCRIBER CALLBACKS"
+
     def odomCallback(self, data):
         """
         Get relevant odom data (relevant sublists: position(x,y) and orientation(x,y,z,w)).
@@ -53,6 +55,8 @@ class Robot:
         :return: void
         """
         self.laser = data.ranges
+
+    "PHASE 1 - SEARCH AND APPROACH WALL"
 
     def classifyDatapoints(self, ptpDistanceThreshold=0.1):
         """
@@ -225,6 +229,10 @@ class Robot:
                 self.vel.linear.x = speed
                 self.velPub.publish(self.vel)
 
+    "PHASE 2 - FOLLOW WALL"
+
+    "MAIN METHOD"
+
     def startRobot(self):
         """
         Main method for controlling the robot.
@@ -252,7 +260,6 @@ class Robot:
                 # rospy.loginfo("rotDegree: " + str(rotDegree))
                 return
 
-
             elif (self.phase == "FollowWall"):
                 pass
             else:
@@ -264,7 +271,8 @@ class Robot:
         rospy.spin()
 
 
-# main function outside your class that is called when the script is executed
+"MAIN FUNCTION"
+
 if __name__ == "__main__":
     # instantiates your class and calls the __init__ function
     robot = Robot()
