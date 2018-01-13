@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# coding=utf-8
 
 # import dependencies
 import rospy
@@ -11,7 +12,10 @@ from tf.transformations import euler_from_quaternion
 
 
 class Robot:
-    # initialise your node, publisher and subscriber as well as some member variables
+    """
+    Main class for controlling the robot.
+    """
+
     def __init__(self):
         rospy.init_node('maze')
         self.rate = rospy.Rate(20)
@@ -33,67 +37,94 @@ class Robot:
 
         # Phases
         self.phase = "SearchApproachWall"
-        self.datapointGroups = []
-        self.absoluteIdxBestDatapoint = -1
 
     def odomCallback(self, data):
-        '''
+        """
         Get relevant odom data (relevant sublists: position(x,y) and orientation(x,y,z,w)).
-        :param data: 
+        :param data: /odom topic data
         :return: position(x,y) and orientation(x,y,z,w)
-        '''
+        """
         self.odom = data.pose.pose
 
     def laserCallback(self, data):
-        '''
-        Get relevant laserscan data (relevant sublist: ranges).
-        :param data: 
-        :return: ranges
-        '''
+        """
+        Get relevant laserscan data (relevant sublist: ranges -> array of distances with 360 elements, spanning 180° degree). 
+        :param data: /laserscan topic data
+        :return: void
+        """
         self.laser = data.ranges
 
-    def classifyDatapoints(self, ptpDistanceThreshold = 0.1):
-
+    def classifyDatapoints(self, ptpDistanceThreshold=0.1):
+        """
+        Classify the data points obtained from the laser scanner into sublists containing points which are close to eachother.
+        For each sublist, the absolute index of its first entry and also average + standard deviation information is added.
+        :param ptpDistanceThreshold: Determines the distance for grouping data points together.
+        :return: Array of classified data points together with meta data. 
+                 Format: datapointGroups[ datapointGroup[rangeList, relativeIdx, average, standardDeviation] ]
+        """
+        datapointGroups = []
         rangeList = []
         for idx, datapoint in enumerate(self.laser):
             if not (rangeList):
                 rangeList.append(datapoint)
-            elif(abs(datapoint - rangeList[-1]) <= ptpDistanceThreshold):
+            elif (abs(datapoint - rangeList[-1]) <= ptpDistanceThreshold):
                 rangeList.append(datapoint)
             else:
+                relIdx = idx - len(rangeList)
+
+                # calculate average(arithmetic mean)
                 avg = sum(rangeList) / float(len(rangeList))
+                # calculate variance
+                var = sum(map(lambda x: (x - avg) ** 2, rangeList))
+                # calculate standard deviation
+                std = ((1 / float(len(rangeList))) * var) ** 0.5
 
-                #calculate variance
-                var = sum(map(lambda x:(x-avg)**2, rangeList))
-                #calculate standard deviation
-                std = ((1/float(len(rangeList))) * var) ** 0.5
-
-                dpGroup = [rangeList, idx-len(rangeList), avg, std]
-                self.datapointGroups.append(dpGroup)
+                dpGroup = [rangeList, relIdx, avg, std]
+                datapointGroups.append(dpGroup)
                 rangeList = []
+        return datapointGroups
 
-    def getAbsoluteIdxBestDatapoint(self, minPointsThreshold=20):
-
+    def getAbsoluteIdxBestDatapoint(self, datapointGroups, minPointsThreshold=20):
+        """
+        Get the absolute index of the middle data point from the most promising data point group.
+        The most promising data point group is determined assigning a score to each group.
+        The score for each group is calculated regarding to the number of datapoints (higher = better), 
+        the average distance (higher = better) and standard deviation (lower = better).
+        :param datapointGroups: [ datapointGroup[rangeList, relativeIdx, average, standardDeviation] ]
+        :param minPointsThreshold: The minimum size of data points a group must provide.
+        :return: Absolute index of the best data point in interval [0;359].
+        """
         bestScore = 0
         idxBestScore = 0
-        for idx, datapointGroup in enumerate(self.datapointGroups):
-            if(len(datapointGroup[0]) >= minPointsThreshold):
-                scoreLen = len(datapointGroup[0])/float(len(self.laser))
-                scoreAvg = datapointGroup[2]/max(self.laser)
+        for idx, datapointGroup in enumerate(datapointGroups):
+            if (len(datapointGroup[0]) >= minPointsThreshold):
+                # number of datapoints and average must be normalized
+                scoreLen = len(datapointGroup[0]) / float(len(self.laser))
+                scoreAvg = datapointGroup[2] / max(self.laser)
                 scoreStd = 1.0 - datapointGroup[3]
                 scoreSum = scoreLen + scoreAvg + scoreStd
-                #rospy.loginfo("scoreSum: " + str(scoreSum))
+                # rospy.loginfo("scoreSum: " + str(scoreSum))
 
-                if(scoreSum > bestScore):
+                if (scoreSum > bestScore):
                     idxBestScore = idx
                     bestScore = scoreSum
-        self.absoluteIdxBestDatapoint = self.datapointGroups[idxBestScore][1] + len(self.datapointGroups[idxBestScore][0])/2
+        absoluteIdxBestDatapoint = datapointGroups[idxBestScore][1] + len(
+            datapointGroups[idxBestScore][0]) / 2
+        return absoluteIdxBestDatapoint
 
-    def calcRotationForBestDatapoint(self):
-
-        return (self.absoluteIdxBestDatapoint - 179) * 0.5
+    def calcRotationForBestDatapoint(self, absoluteIdxBestDatapoint):
+        """
+        Calculate degree the roboter must rotate to face the best data point.
+        :param absoluteIdxBestDatapoint: Absolute index of the best data point in interval [0;359].
+        :return: Degree in interval [-180;180]
+        """
+        return (absoluteIdxBestDatapoint - 179) * 0.5
 
     def getCurrYawDegree(self):
+        """
+        Converts the odom orientation quaternion data into yaw degree.
+        :return: Yaw degree in interval [0;359]
+        """
         orientation = self.odom.orientation
         orientationList = [orientation.x, orientation.y, orientation.z, orientation.w]
         # rad from quaternion
@@ -108,18 +139,26 @@ class Robot:
 
         return yawDegree
 
-    def turnDegree(self, requestTurnDegree, speed, threshold=0.0):
-
+    def rotateRobotDegree(self, requestTurnDegree, speed):
+        """
+        Rotate the robot yaw for the specified degree.
+        :param requestTurnDegree: 
+        :param speed: Turn speed
+        :return: void
+        """
+        # Overflow (underflow) occurs when numbers are outside of inverval [0;360]
         overflow = False
         fluctuationTheshold = 10
+
         currYawDegree = self.getCurrYawDegree()
-        prevYawDegree = currYawDegree
         degreeTarget = currYawDegree + requestTurnDegree
 
-        if(requestTurnDegree > 0):
-            while(currYawDegree < degreeTarget):
+        # Rotate positive degree
+        if (requestTurnDegree > 0):
+            while (currYawDegree < degreeTarget):
                 prevYawDegree = currYawDegree
-                if(overflow):
+                # Adjust the current degree for overflow error
+                if (overflow):
                     currYawDegree = self.getCurrYawDegree() + 359
                 else:
                     currYawDegree = self.getCurrYawDegree()
@@ -127,17 +166,19 @@ class Robot:
                 self.vel.angular.z = speed
                 self.velPub.publish(self.vel)
 
-                if(currYawDegree+fluctuationTheshold < prevYawDegree):
+                # Overflow detection
+                if (currYawDegree + fluctuationTheshold < prevYawDegree):
                     overflow = True
 
-                #rospy.loginfo("TURN POS")
-                #rospy.loginfo("currYawDegree: " + str(currYawDegree))
-                #rospy.loginfo("degreeTarget: " + str(degreeTarget))
+                    # rospy.loginfo("TURN POS")
+                    # rospy.loginfo("currYawDegree: " + str(currYawDegree))
+                    # rospy.loginfo("degreeTarget: " + str(degreeTarget))
 
-        elif(requestTurnDegree < 0):
-            while(currYawDegree > degreeTarget):
+        elif (requestTurnDegree < 0):
+            while (currYawDegree > degreeTarget):
                 prevYawDegree = currYawDegree
-                if(overflow):
+                # Adjust the current degree for overflow error
+                if (overflow):
                     currYawDegree = self.getCurrYawDegree() - 360
                 else:
                     currYawDegree = self.getCurrYawDegree()
@@ -145,27 +186,38 @@ class Robot:
                 self.vel.angular.z = speed * -1
                 self.velPub.publish(self.vel)
 
-                if(currYawDegree-fluctuationTheshold > prevYawDegree):
+                # Overflow detection
+                if (currYawDegree - fluctuationTheshold > prevYawDegree):
                     overflow = True
         else:
-            #nothing to do
-            rospy.loginfo("nothing to do")
+            # nothing to do
+            # rospy.loginfo("Nothing to do")
             return
 
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
     def moveStraightBeforeWall(self, speed, datapoints=2):
+        """
+        Move the robot straight in front of the wall and stop at specified distance.
+        :param speed: Move speed
+        :param datapoints: Number of data points to use.
+        :return: void
+        """
 
         def getAvgRelevantDatapoints():
+            """
+            Calculate the average range of the specified amount of data points.
+            :return: Average of data points.
+            """
             listMiddle = len(self.laser) / 2
             relevantDatapoints = self.laser[listMiddle - (datapoints / 2): listMiddle + (datapoints / 2)]
             return sum(relevantDatapoints) / float(len(relevantDatapoints))
 
-        while(True):
+        while (True):
             avgDist = getAvgRelevantDatapoints()
-            #rospy.loginfo("avgDist: " + str(avgDist))
-            if(avgDist <= self.WALLDISTANCE):
+            # rospy.loginfo("avgDist: " + str(avgDist))
+            if (avgDist <= self.WALLDISTANCE):
                 self.vel.linear.x = 0.0
                 self.velPub.publish(self.vel)
                 return
@@ -174,30 +226,34 @@ class Robot:
                 self.velPub.publish(self.vel)
 
     def startRobot(self):
-        rospy.loginfo("start")
+        """
+        Main method for controlling the robot.
+        :return: void
+        """
+        rospy.loginfo("Start!")
 
         while not rospy.is_shutdown():
-            if(self.phase == "SearchApproachWall"):
+            if (self.phase == "SearchApproachWall"):
                 while not (self.laser and self.odom):
+                    # Required because these data are provided with some delay.
                     rospy.loginfo("Wait for laser and odom data..")
 
-                self.classifyDatapoints()
-                self.getAbsoluteIdxBestDatapoint()
-                rotDegree = self.calcRotationForBestDatapoint()
-                #rospy.loginfo("rotDegree: " + str(rotDegree))
-                #rospy.loginfo("Yaw: " + str(self.getCurrYawDegree()))
-                self.turnDegree(rotDegree, 0.2)
+                datapointGroups = self.classifyDatapoints()
+                absoluteIdxBestDatapoint = self.getAbsoluteIdxBestDatapoint(datapointGroups)
+                rotDegree = self.calcRotationForBestDatapoint(absoluteIdxBestDatapoint)
+                # rospy.loginfo("rotDegree: " + str(rotDegree))
+                # rospy.loginfo("Yaw: " + str(self.getCurrYawDegree()))
+                self.rotateRobotDegree(rotDegree, 0.2)
                 self.moveStraightBeforeWall(0.3)
 
-
-                #rospy.loginfo(self.datapointGroups[self.idxBestScore])
-                #rospy.loginfo("Best score idx:" + str(self.idxBestScore))
-                #rospy.loginfo("absoluteIdxBestDatapoint:" + str(self.absoluteIdxBestDatapoint))
-                #rospy.loginfo("rotDegree: " + str(rotDegree))
+                # rospy.loginfo(self.datapointGroups[self.idxBestScore])
+                # rospy.loginfo("Best score idx:" + str(self.idxBestScore))
+                # rospy.loginfo("absoluteIdxBestDatapoint:" + str(self.absoluteIdxBestDatapoint))
+                # rospy.loginfo("rotDegree: " + str(rotDegree))
                 return
 
 
-            elif(self.phase == "FollowWall"):
+            elif (self.phase == "FollowWall"):
                 pass
             else:
                 rospy.logerr("Phasename does not match any defined phase.")
