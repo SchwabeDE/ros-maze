@@ -293,17 +293,14 @@ class Robot:
         """
         rospy.loginfo("Start!")
 
-        self.phase = "FollowWall"
+        #self.phase = "FollowWall"
         while not (self.laser and self.odom):
             # Required because these data are provided with some delay.
             rospy.loginfo("Wait for laser and odom data..")
 
         while not rospy.is_shutdown():
-            if (self.phase == "Phase: SearchApproachWall"):
-                rospy.loginfo("SearchApproachWall")
-                while not (self.laser and self.odom):
-                    # Required because these data are provided with some delay.
-                    rospy.loginfo("Wait for laser and odom data..")
+            if (self.phase == "SearchApproachWall"):
+                rospy.loginfo("Phase: SearchApproachWall")
 
                 datapointGroups = self.classifyDatapoints()
                 absoluteIdxBestDatapoint = self.getAbsoluteIdxBestDatapoint(datapointGroups)
@@ -323,6 +320,10 @@ class Robot:
                 rospy.loginfo("Phase: FollowWall")
 
                 self.allignToWall()
+                self.phase = "Finish"
+
+            elif (self.phase == "Finish"):
+                rospy.loginfo("Finish")
                 return
 
             else:
