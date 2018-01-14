@@ -287,10 +287,10 @@ class Robot:
         self.velPub.publish(self.vel)
 
     def followWall(self):
-        # best tested Values: P=10.0, I=1.0, D=2.0
-        P = 5.0
+        # previously best tested Values: P=5.0, I=0.0, D=3.0
+        P = 1.0
         I = 0
-        D = 3.0
+        D = 0.5
         pid = PID.PID(P, I, D)
         pid.SetPoint = 0.0
         pid.setSampleTime(0.0)
@@ -313,7 +313,8 @@ class Robot:
             if (abs(pvDifference) < pvDifferenceTheshold):
                 self.vel.linear.x = self.MOVESPEED
             else:
-                self.vel.linear.x = 0
+                #self.vel.linear.x = 0
+                pass
 
             self.vel.angular.z = output
 
@@ -350,7 +351,7 @@ class Robot:
         """
         rospy.loginfo("Start!")
 
-        self.phase = "FollowWall"
+        self.phase = "SearchApproachWall"
         while not (self.laser and self.odom):
             # Required because these data are provided with some delay.
             rospy.loginfo("Wait for laser and odom data..")
