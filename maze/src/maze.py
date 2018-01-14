@@ -34,7 +34,7 @@ class Robot:
         self.laser = []
 
         # Settings
-        self.WALLDISTANCE = 0.5
+        self.WALLDISTANCE = 0.8
         self.ERRORMARGIN = 0.000001
         self.MOVESPEED = 0.3
         self.ROTATIONSPEED = 0.2
@@ -206,7 +206,7 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
-    def getAvgMiddleDatapoints(self, datapoints=10):
+    def getAvgMiddleDatapoints(self, datapoints=60):
         """
         Calculate the average range of the specified amount of data points.
         :return: Average of data points.
@@ -287,11 +287,13 @@ class Robot:
         self.velPub.publish(self.vel)
 
     def followWall(self):
-        P = 0.2
-        I = 0.0
-        D = 0.0
+        # best tested Values: P=10.0, I=1.0, D=2.0
+        P = 5.0
+        I = 0
+        D = 3.0
         pid = PID.PID(P, I, D)
         pid.SetPoint = 0.0
+        pid.setSampleTime(0.0)
 
         while (True):
 
@@ -307,13 +309,13 @@ class Robot:
             output = pid.output
             rospy.loginfo("PID Output: " + str(output))
 
-            pvDifferenceTheshold = 0.2
+            pvDifferenceTheshold = self.WALLDISTANCE
             if (abs(pvDifference) < pvDifferenceTheshold):
                 self.vel.linear.x = self.MOVESPEED
             else:
                 self.vel.linear.x = 0
 
-            self.vel.angular.z = 1.0 * (output * 10)
+            self.vel.angular.z = output
 
             '''
             # Too far from wall away
@@ -348,7 +350,7 @@ class Robot:
         """
         rospy.loginfo("Start!")
 
-        self.phase = "SearchApproachWall"
+        self.phase = "FollowWall"
         while not (self.laser and self.odom):
             # Required because these data are provided with some delay.
             rospy.loginfo("Wait for laser and odom data..")
