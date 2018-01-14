@@ -209,9 +209,21 @@ class Robot:
         Calculate the average range of the specified amount of data points.
         :return: Average of data points.
         """
-        listMiddle = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddle - (datapoints / 2): listMiddle + (datapoints / 2)]
+        listMiddleIdx = len(self.laser) / 2
+        relevantDatapoints = self.laser[listMiddleIdx - (datapoints / 2): listMiddleIdx + (datapoints / 2)]
         return sum(relevantDatapoints) / float(len(relevantDatapoints))
+
+    def getMedianMiddleDatapoints(self, datapoints=60):
+        listMiddleIdx = len(self.laser) / 2
+        relevantDatapoints = self.laser[listMiddleIdx - (datapoints / 2): listMiddleIdx + (datapoints / 2)]
+        sortedList = sorted(relevantDatapoints)
+        median = sortedList[int(len(sortedList)/2)]
+        return median
+
+    def getMinMiddleDatapoints(self, datapointNumber=30):
+        listMiddleIdx = len(self.laser) / 2
+        relevantDatapoints = self.laser[listMiddleIdx - (datapointNumber / 2): listMiddleIdx + (datapointNumber / 2)]
+        return min(relevantDatapoints)
 
     def moveStraightBeforeWall(self, speed, datapoints=10):
         """
@@ -317,10 +329,10 @@ class Robot:
 
             # PID control cycle
             errorValue = avgDist - self.WALLDISTANCE
-            rospy.loginfo("errorValue: " + str(errorValue))
+            #rospy.loginfo("errorValue: " + str(errorValue))
             pid.update(errorValue)
             controlVariable = pid.output
-            rospy.loginfo("PID Output: " + str(controlVariable))
+            #rospy.loginfo("PID Output: " + str(controlVariable))
 
             '''
             # Stop the robot if the wall is too far away
@@ -335,9 +347,14 @@ class Robot:
             self.vel.angular.z = controlVariable
 
             # Wall is in front
-            datapointsFromMiddle = 30
-            avgMiddleDatapoints = self.getAvgMiddleDatapoints(datapointsFromMiddle)
-            if (avgMiddleDatapoints <= self.WALLDISTANCE):
+            numberDatapointsFromMiddle = 30
+            avgMiddleDatapoints = self.getAvgMiddleDatapoints(numberDatapointsFromMiddle)
+            medianMiddleDatapoints = self.getMedianMiddleDatapoints(numberDatapointsFromMiddle)
+            minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
+
+            rospy.loginfo("minMiddleDatapoints: " + str(minMiddleDatapoints))
+            rospy.loginfo("medianMiddleDatapoints: " + str(medianMiddleDatapoints))
+            if (minMiddleDatapoints <= self.WALLDISTANCE):
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
                 self.allignToWall()
