@@ -3,6 +3,7 @@
 
 # import dependencies
 import rospy
+import PID
 
 # import messages
 from nav_msgs.msg import Odometry
@@ -259,10 +260,10 @@ class Robot:
             rospy.loginfo("smallestAvgGroupIdx: " + str(smallestAvgGroupIdx))
             return smallestAvgGroupIdx
 
-        if(self.followWallDirection == "left"):
+        if (self.followWallDirection == "left"):
             targetGroupIdx = 0
-        elif(self.followWallDirection == "right"):
-            targetGroupIdx = len(self.getEqualsizedDatapointGroups(datapoints))-1
+        elif (self.followWallDirection == "right"):
+            targetGroupIdx = len(self.getEqualsizedDatapointGroups(datapoints)) - 1
             speed *= -1
         else:
             rospy.logerr("Incorrect followWallDirection parameter.")
@@ -286,46 +287,57 @@ class Robot:
         self.velPub.publish(self.vel)
 
     def followWall(self):
+        P = 0.2
+        I = 0.0
+        D = 0.0
+        pid = PID.PID(P, I, D)
+        pid.SetPoint = 0.0
 
-        while(True):
+        while (True):
 
             targetGroupIdx = 0
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups()
             avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
 
-
             pvDifference = avgDist - self.WALLDISTANCE
             rospy.loginfo("pvDifference: " + str(pvDifference))
 
+            # TODO PID ADJUSTMENT
+            pid.update(pvDifference)
+            output = pid.output
+            rospy.loginfo("PID Output: " + str(output))
+
             pvDifferenceTheshold = 0.2
-            if(abs(pvDifference) < pvDifferenceTheshold):
+            if (abs(pvDifference) < pvDifferenceTheshold):
                 self.vel.linear.x = self.MOVESPEED
             else:
                 self.vel.linear.x = 0
 
+            self.vel.angular.z = 1.0 * (output * 10)
+
+            '''
             # Too far from wall away
-            if(pvDifference > 0):
+            if (pvDifference > 0):
                 self.vel.angular.z = self.ROTATIONSPEED * -1
 
             # Too close to wall
-            elif(pvDifference < 0):
+            elif (pvDifference < 0):
                 self.vel.angular.z = self.ROTATIONSPEED
 
             else:
                 self.vel.angular.z = 0.0
+            '''
 
             # Wall is in front
 
             avgMiddleDatapoints = self.getAvgMiddleDatapoints()
-            if(avgMiddleDatapoints <= self.WALLDISTANCE):
+            if (avgMiddleDatapoints <= self.WALLDISTANCE):
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
                 self.allignToWall()
 
             self.velPub.publish(self.vel)
             self.rate.sleep()
-
-
 
     "MAIN METHOD"
 
@@ -362,7 +374,7 @@ class Robot:
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
 
-                #self.allignToWall()
+                # self.allignToWall()
                 self.followWall()
 
                 self.phase = "Finish"
