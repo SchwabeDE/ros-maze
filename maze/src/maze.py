@@ -40,7 +40,7 @@ class Robot:
         # Phases
         self.phase = "SearchApproachWall"
         # Possible values = "left", "right"
-        self.followWallDirection = "right"
+        self.followWallDirection = "left"
 
     "SUBSCRIBER CALLBACKS"
 
@@ -231,10 +231,8 @@ class Robot:
 
     def getEqualsizedDatapointGroups(self, numberDatapoints=30):
         # Put laser scanner data points in euqally large groups
-        numberElementsInGroup = int(len(self.laser) / numberDatapoints)
-        datapointGroups = []
-        for i in range(0, len(self.laser), numberElementsInGroup):
-            datapointGroups.append(self.laser[i:i + numberDatapoints])
+
+        datapointGroups = [self.laser[x:x+numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
         return datapointGroups
 
     def calcAvgDist(self, datapoints):
