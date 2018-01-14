@@ -40,7 +40,7 @@ class Robot:
         # Phases
         self.phase = "SearchApproachWall"
         # Possible values = "left", "right"
-        self.followWallDirection = "left"
+        self.followWallDirection = "right"
 
     "SUBSCRIBER CALLBACKS"
 
@@ -210,15 +210,6 @@ class Robot:
         relevantDatapoints = self.laser[listMiddleIdx - (datapointNumber / 2): listMiddleIdx + (datapointNumber / 2)]
         return min(relevantDatapoints)
 
-    def getAvgMiddleDatapoints(self, datapoints=60):
-        """
-        Calculate the average range of the specified amount of data points.
-        :return: Average of data points.
-        """
-        listMiddleIdx = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddleIdx - (datapoints / 2): listMiddleIdx + (datapoints / 2)]
-        return sum(relevantDatapoints) / float(len(relevantDatapoints))
-
     def moveStraightBeforeWall(self, speed, numberDatapoints=10):
         """
         Move the robot straight in front of the wall and stop at specified distance.
@@ -228,7 +219,6 @@ class Robot:
         """
         while (True):
             minDist = self.getMinMiddleDatapoints(numberDatapoints)
-            # rospy.loginfo("minDist: " + str(minDist))
             if (minDist <= self.WALLDISTANCE):
                 self.vel.linear.x = 0.0
                 self.velPub.publish(self.vel)
@@ -279,7 +269,6 @@ class Robot:
         while (True):
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(numberDatapoints)
             avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
-            #minDist = min(equalsizedDatapointGroups[targetGroupIdx])
 
             if (calcIdxSmallestAvgDist(equalsizedDatapointGroups) == targetGroupIdx and prevAvg > avgDist):
                 # Add some delay for fine adjustment
@@ -310,7 +299,7 @@ class Robot:
         while (True):
 
             # Calculate the avg distance from the robot site to the wall
-            datapointsInGroup = 90 #30
+            datapointsInGroup = 90
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapointsInGroup)
 
             if (self.followWallDirection == "left"):
@@ -325,15 +314,12 @@ class Robot:
                 rospy.logerr("Incorrect followWallDirection parameter.")
                 return
 
-            #avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
             minDistWallfollowSide = min(equalsizedDatapointGroups[targetGroupIdx])
 
             # PID control cycle
             errorValue = minDistWallfollowSide - self.WALLDISTANCE
-            #rospy.loginfo("errorValue: " + str(errorValue))
             pid.update(errorValue)
             controlVariable = pid.output
-            #rospy.loginfo("PID Output: " + str(controlVariable))
 
             rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
             errorValuePrev = errorValue
@@ -342,7 +328,7 @@ class Robot:
             self.vel.angular.z = controlVariable * followWallDirectionAdjustment
 
             # Wall is in front
-            numberDatapointsFromMiddle = 180    #120
+            numberDatapointsFromMiddle = 180
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
 
             if (minMiddleDatapoints <= self.WALLDISTANCE):
@@ -374,21 +360,15 @@ class Robot:
                 datapointGroups = self.classifyDatapoints()
                 absoluteIdxBestDatapoint = self.getAbsoluteIdxBestDatapoint(datapointGroups)
                 rotDegree = self.calcRotationForBestDatapoint(absoluteIdxBestDatapoint)
-                # rospy.loginfo("rotDegree: " + str(rotDegree))
-                # rospy.loginfo("Yaw: " + str(self.getCurrYawDegree()))
+
                 self.rotateRobotDegree(rotDegree, 0.2)
                 self.moveStraightBeforeWall(0.3)
 
-                # rospy.loginfo(self.datapointGroups[self.idxBestScore])
-                # rospy.loginfo("Best score idx:" + str(self.idxBestScore))
-                # rospy.loginfo("absoluteIdxBestDatapoint:" + str(self.absoluteIdxBestDatapoint))
-                # rospy.loginfo("rotDegree: " + str(rotDegree))
                 self.phase = "FollowWall"
 
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
 
-                #self.allignToWall()
                 self.followWall()
 
                 self.phase = "Finish"
@@ -400,7 +380,7 @@ class Robot:
             else:
                 rospy.logerr("Phasename does not match any defined phase.")
 
-            # sleep to prevent flooding your console
+            # Sleep to prevent flooding your console
             self.rate.sleep()
 
         rospy.spin()
