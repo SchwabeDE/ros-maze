@@ -219,24 +219,17 @@ class Robot:
         relevantDatapoints = self.laser[listMiddleIdx - (datapoints / 2): listMiddleIdx + (datapoints / 2)]
         return sum(relevantDatapoints) / float(len(relevantDatapoints))
 
-    def getMedianMiddleDatapoints(self, datapoints=60):
-        listMiddleIdx = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddleIdx - (datapoints / 2): listMiddleIdx + (datapoints / 2)]
-        sortedList = sorted(relevantDatapoints)
-        median = sortedList[int(len(sortedList)/2)]
-        return median
-
-    def moveStraightBeforeWall(self, speed, datapoints=10):
+    def moveStraightBeforeWall(self, speed, numberDatapoints=10):
         """
         Move the robot straight in front of the wall and stop at specified distance.
         :param speed: Move speed
-        :param datapoints: Number of data points to use.
+        :param numberDatapoints: Number of data points to use.
         :return: void
         """
         while (True):
-            avgDist = self.getAvgMiddleDatapoints(datapoints)
-            # rospy.loginfo("avgDist: " + str(avgDist))
-            if (avgDist <= self.WALLDISTANCE):
+            minDist = self.getMinMiddleDatapoints(numberDatapoints)
+            # rospy.loginfo("minDist: " + str(minDist))
+            if (minDist <= self.WALLDISTANCE):
                 self.vel.linear.x = 0.0
                 self.velPub.publish(self.vel)
                 return
@@ -345,15 +338,6 @@ class Robot:
             rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
             errorValuePrev = errorValue
 
-            '''
-            # Stop the robot if the wall is too far away
-            errorValueThreshold = self.WALLDISTANCE
-            if (abs(errorValue) < errorValueThreshold):
-                self.vel.linear.x = self.ROBOTMOVESPEED
-            else:
-                #self.vel.linear.x = 0
-                pass
-            '''
             self.vel.linear.x = self.ROBOTMOVESPEED
             self.vel.angular.z = controlVariable * followWallDirectionAdjustment
 
