@@ -204,6 +204,11 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
+    def getMinMiddleDatapoints(self, datapointNumber=30):
+        listMiddleIdx = len(self.laser) / 2
+        relevantDatapoints = self.laser[listMiddleIdx - (datapointNumber / 2): listMiddleIdx + (datapointNumber / 2)]
+        return min(relevantDatapoints)
+
     def getAvgMiddleDatapoints(self, datapoints=60):
         """
         Calculate the average range of the specified amount of data points.
@@ -219,11 +224,6 @@ class Robot:
         sortedList = sorted(relevantDatapoints)
         median = sortedList[int(len(sortedList)/2)]
         return median
-
-    def getMinMiddleDatapoints(self, datapointNumber=30):
-        listMiddleIdx = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddleIdx - (datapointNumber / 2): listMiddleIdx + (datapointNumber / 2)]
-        return min(relevantDatapoints)
 
     def moveStraightBeforeWall(self, speed, datapoints=10):
         """
@@ -352,8 +352,6 @@ class Robot:
             medianMiddleDatapoints = self.getMedianMiddleDatapoints(numberDatapointsFromMiddle)
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
 
-            rospy.loginfo("minMiddleDatapoints: " + str(minMiddleDatapoints))
-            rospy.loginfo("medianMiddleDatapoints: " + str(medianMiddleDatapoints))
             if (minMiddleDatapoints <= self.WALLDISTANCE):
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
