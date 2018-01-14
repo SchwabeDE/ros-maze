@@ -33,8 +33,10 @@ class Robot:
         self.laser = []
 
         # Settings
-        self.WALLDISTANCE = 0.8
+        self.WALLDISTANCE = 0.5
         self.ERRORMARGIN = 0.000001
+        self.MOVESPEED = 0.3
+        self.ROTATIONSPEED = 0.2
 
         # Phases
         self.phase = "SearchApproachWall"
@@ -203,25 +205,24 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
-    def moveStraightBeforeWall(self, speed, datapoints=2):
+    def getAvgMiddleDatapoints(self, datapoints=10):
+        """
+        Calculate the average range of the specified amount of data points.
+        :return: Average of data points.
+        """
+        listMiddle = len(self.laser) / 2
+        relevantDatapoints = self.laser[listMiddle - (datapoints / 2): listMiddle + (datapoints / 2)]
+        return sum(relevantDatapoints) / float(len(relevantDatapoints))
+
+    def moveStraightBeforeWall(self, speed, datapoints=10):
         """
         Move the robot straight in front of the wall and stop at specified distance.
         :param speed: Move speed
         :param datapoints: Number of data points to use.
         :return: void
         """
-
-        def getAvgRelevantDatapoints():
-            """
-            Calculate the average range of the specified amount of data points.
-            :return: Average of data points.
-            """
-            listMiddle = len(self.laser) / 2
-            relevantDatapoints = self.laser[listMiddle - (datapoints / 2): listMiddle + (datapoints / 2)]
-            return sum(relevantDatapoints) / float(len(relevantDatapoints))
-
         while (True):
-            avgDist = getAvgRelevantDatapoints()
+            avgDist = self.getAvgMiddleDatapoints(datapoints)
             # rospy.loginfo("avgDist: " + str(avgDist))
             if (avgDist <= self.WALLDISTANCE):
                 self.vel.linear.x = 0.0
@@ -233,24 +234,24 @@ class Robot:
 
     "PHASE 2 - FOLLOW WALL"
 
-    def allignToWall(self, datapoints=15, speed=0.2):
+    def getEqualsizedDatapointGroups(self, datapoints=10):
+        # Put laser scanner data points in euqally large groups
+        numberElementsInGroup = len(self.laser) / datapoints
+        datapointGroups = []
+        for i in range(0, len(self.laser), numberElementsInGroup):
+            datapointGroups.append(self.laser[i:i + datapoints])
+        return datapointGroups
 
-        def getEqualsizedDatapointGroups():
-            # Put laser scanner data points in euqally large groups
-            numberElementsInGroup = len(self.laser) / datapoints
-            datapointGroups = []
-            for i in range(0, len(self.laser), numberElementsInGroup):
-                datapointGroups.append(self.laser[i:i + datapoints])
-            return datapointGroups
+    def calcAvgDist(self, datapoints):
+        return sum(datapoints) / float(len(datapoints))
 
-        def calcAvgDist(datapoints):
-            return sum(datapoints) / float(len(datapoints))
+    def allignToWall(self, datapoints=10, speed=0.2):
 
         def calcIdxSmallestAvgDist(datapointGroups):
             smallestAvg = max(self.laser)
             smallestAvgGroupIdx = -1
             for currIdx, dpGroup in enumerate(datapointGroups):
-                currAvg = calcAvgDist(dpGroup)
+                currAvg = self.calcAvgDist(dpGroup)
 
                 if (currAvg < smallestAvg):
                     smallestAvgGroupIdx = currIdx
@@ -261,7 +262,7 @@ class Robot:
         if(self.followWallDirection == "left"):
             targetGroupIdx = 0
         elif(self.followWallDirection == "right"):
-            targetGroupIdx = len(getEqualsizedDatapointGroups())-1
+            targetGroupIdx = len(self.getEqualsizedDatapointGroups(datapoints))-1
             speed *= -1
         else:
             rospy.logerr("Incorrect followWallDirection parameter.")
@@ -269,8 +270,8 @@ class Robot:
         prevAvg = 0
 
         while (True):
-            equalsizedDatapointGroups = getEqualsizedDatapointGroups()
-            avgDist = calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
+            equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapoints)
+            avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
 
             if (calcIdxSmallestAvgDist(equalsizedDatapointGroups) == targetGroupIdx and prevAvg > avgDist):
                 # Add some delay for fine adjustment
@@ -284,6 +285,48 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
+    def followWall(self):
+
+        while(True):
+
+            targetGroupIdx = 0
+            equalsizedDatapointGroups = self.getEqualsizedDatapointGroups()
+            avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
+
+
+            pvDifference = avgDist - self.WALLDISTANCE
+            rospy.loginfo("pvDifference: " + str(pvDifference))
+
+            pvDifferenceTheshold = 0.2
+            if(abs(pvDifference) < pvDifferenceTheshold):
+                self.vel.linear.x = self.MOVESPEED
+            else:
+                self.vel.linear.x = 0
+
+            # Too far from wall away
+            if(pvDifference > 0):
+                self.vel.angular.z = self.ROTATIONSPEED * -1
+
+            # Too close to wall
+            elif(pvDifference < 0):
+                self.vel.angular.z = self.ROTATIONSPEED
+
+            else:
+                self.vel.angular.z = 0.0
+
+            # Wall is in front
+
+            avgMiddleDatapoints = self.getAvgMiddleDatapoints()
+            if(avgMiddleDatapoints <= self.WALLDISTANCE):
+                self.vel.linear.x = 0
+                self.velPub.publish(self.vel)
+                self.allignToWall()
+
+            self.velPub.publish(self.vel)
+            self.rate.sleep()
+
+
+
     "MAIN METHOD"
 
     def startRobot(self):
@@ -293,7 +336,7 @@ class Robot:
         """
         rospy.loginfo("Start!")
 
-        #self.phase = "FollowWall"
+        self.phase = "SearchApproachWall"
         while not (self.laser and self.odom):
             # Required because these data are provided with some delay.
             rospy.loginfo("Wait for laser and odom data..")
@@ -319,7 +362,9 @@ class Robot:
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
 
-                self.allignToWall()
+                #self.allignToWall()
+                self.followWall()
+
                 self.phase = "Finish"
 
             elif (self.phase == "Finish"):
