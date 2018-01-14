@@ -39,7 +39,8 @@ class Robot:
 
         # Phases
         self.phase = "SearchApproachWall"
-        self.followWallDirection = "left"
+        # Possible values = "left", "right"
+        self.followWallDirection = "right"
 
     "SUBSCRIBER CALLBACKS"
 
@@ -245,7 +246,7 @@ class Robot:
 
     "PHASE 2 - FOLLOW WALL"
 
-    def getEqualsizedDatapointGroups(self, numberDatapoints=10):
+    def getEqualsizedDatapointGroups(self, numberDatapoints=30):
         # Put laser scanner data points in euqally large groups
         numberElementsInGroup = int(len(self.laser) / numberDatapoints)
         datapointGroups = []
@@ -285,6 +286,7 @@ class Robot:
         while (True):
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(numberDatapoints)
             avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
+            #minDist = min(equalsizedDatapointGroups[targetGroupIdx])
 
             if (calcIdxSmallestAvgDist(equalsizedDatapointGroups) == targetGroupIdx and prevAvg > avgDist):
                 # Add some delay for fine adjustment
@@ -312,23 +314,26 @@ class Robot:
         while (True):
 
             # Calculate the avg distance from the robot site to the wall
-            datapointsInGroup = 10
+            datapointsInGroup = 30
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapointsInGroup)
 
             if (self.followWallDirection == "left"):
                 # Use sensor data from the right side of the robot to follow the wall to the left
                 targetGroupIdx = 0
+                followWallDirectionAdjustment = 1
             elif (self.followWallDirection == "right"):
                 # Use sensor data from the left side of the robot to follow the wall to the right
                 targetGroupIdx = len(equalsizedDatapointGroups) - 1
+                followWallDirectionAdjustment = -1
             else:
                 rospy.logerr("Incorrect followWallDirection parameter.")
                 return
 
-            avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
+            #avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
+            minDist = min(equalsizedDatapointGroups[targetGroupIdx])
 
             # PID control cycle
-            errorValue = avgDist - self.WALLDISTANCE
+            errorValue = minDist - self.WALLDISTANCE
             #rospy.loginfo("errorValue: " + str(errorValue))
             pid.update(errorValue)
             controlVariable = pid.output
@@ -344,12 +349,10 @@ class Robot:
                 pass
             '''
             self.vel.linear.x = self.ROBOTMOVESPEED
-            self.vel.angular.z = controlVariable
+            self.vel.angular.z = controlVariable * followWallDirectionAdjustment
 
             # Wall is in front
             numberDatapointsFromMiddle = 30
-            avgMiddleDatapoints = self.getAvgMiddleDatapoints(numberDatapointsFromMiddle)
-            medianMiddleDatapoints = self.getMedianMiddleDatapoints(numberDatapointsFromMiddle)
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
 
             if (minMiddleDatapoints <= self.WALLDISTANCE):
@@ -395,7 +398,7 @@ class Robot:
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
 
-                # self.allignToWall()
+                #self.allignToWall()
                 self.followWall()
 
                 self.phase = "Finish"
