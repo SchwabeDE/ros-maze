@@ -32,7 +32,7 @@ class Robot:
         self.vel = Twist()
 
         # Settings
-        self.WALLDISTANCE = 0.8
+        self.WALLDISTANCE = 0.5
         self.ERRORMARGIN = 0.000001
         self.ROBOTMOVESPEED = 0.3
         self.ROBOTROTATIONSPEED = 0.2
@@ -40,7 +40,7 @@ class Robot:
         # Phases
         self.phase = "SearchApproachWall"
         # Possible values = "left", "right"
-        self.followWallDirection = "right"
+        self.followWallDirection = "left"
 
     "SUBSCRIBER CALLBACKS"
 
@@ -303,18 +303,21 @@ class Robot:
     def followWall(self):
 
         # Init PID
-        # previously best tested Values: P=5.0, I=0.0, D=3.0
-        P = 0.5
+        # previously best tested Values #1: P=0.5, I=0.0, D=1.6
+        # previously best tested Values #2: P=0.6, I=0.0, D=1.4
+        P = 0.6
         I = 0
-        D = 0.8
+        D = 1.4
         pid = PID.PID(P, I, D)
         pid.SetPoint = 0.0
         pid.setSampleTime(0.0)
 
+        errorValuePrev = 0
+
         while (True):
 
             # Calculate the avg distance from the robot site to the wall
-            datapointsInGroup = 30
+            datapointsInGroup = 90 #30
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapointsInGroup)
 
             if (self.followWallDirection == "left"):
@@ -330,14 +333,17 @@ class Robot:
                 return
 
             #avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
-            minDist = min(equalsizedDatapointGroups[targetGroupIdx])
+            minDistWallfollowSide = min(equalsizedDatapointGroups[targetGroupIdx])
 
             # PID control cycle
-            errorValue = minDist - self.WALLDISTANCE
+            errorValue = minDistWallfollowSide - self.WALLDISTANCE
             #rospy.loginfo("errorValue: " + str(errorValue))
             pid.update(errorValue)
             controlVariable = pid.output
             #rospy.loginfo("PID Output: " + str(controlVariable))
+
+            rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
+            errorValuePrev = errorValue
 
             '''
             # Stop the robot if the wall is too far away
@@ -352,7 +358,7 @@ class Robot:
             self.vel.angular.z = controlVariable * followWallDirectionAdjustment
 
             # Wall is in front
-            numberDatapointsFromMiddle = 30
+            numberDatapointsFromMiddle = 180    #120
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
 
             if (minMiddleDatapoints <= self.WALLDISTANCE):
