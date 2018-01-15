@@ -234,8 +234,13 @@ class Robot:
     "PHASE 2 - FOLLOW WALL"
 
     def getEqualsizedDatapointGroups(self, numberDatapoints):
-        datapointGroups = [self.laser[x:x+numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
-        return datapointGroups
+
+        if(numberDatapoints % len(self.laser) == 0):
+            datapointGroups = [self.laser[x:x+numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
+            return datapointGroups
+        else:
+            rospy.logerr("getEqualsizedDatapointGroups must be divisible without remainder by its argument numberDatapoints")
+            return None
 
     def calcAvgDist(self, datapoints):
         return sum(datapoints) / float(len(datapoints))
