@@ -147,11 +147,10 @@ class Robot:
 
         return yawDegree
 
-    def rotateRobotDegree(self, requestTurnDegree, speed):
+    def rotateRobotDegree(self, requestTurnDegree):
         """
         Rotate the robot yaw for the specified degree.
         :param requestTurnDegree: 
-        :param speed: Turn speed
         :return: void
         """
         # Overflow (underflow) occurs when numbers are outside of inverval [0;360]
@@ -160,6 +159,8 @@ class Robot:
 
         currYawDegree = self.getCurrYawDegree()
         degreeTarget = currYawDegree + requestTurnDegree
+
+        speed = self.ROBOTROTATIONSPEED
 
         # Rotate positive degree
         if (requestTurnDegree > 0):
@@ -177,10 +178,6 @@ class Robot:
                 # Overflow detection
                 if (currYawDegree + fluctuationTheshold < prevYawDegree):
                     overflow = True
-
-                    # rospy.loginfo("TURN POS")
-                    # rospy.loginfo("currYawDegree: " + str(currYawDegree))
-                    # rospy.loginfo("degreeTarget: " + str(degreeTarget))
 
         elif (requestTurnDegree < 0):
             while (currYawDegree > degreeTarget):
@@ -317,7 +314,7 @@ class Robot:
         The distance from the robot side to the wall is measured and compared with the target distance.
         A PID controller ensures that this distance can be adhered to with relatively small fluctuation.
         If a wall is detected in front of the robot, it will rotate for 90° to the specified direction.
-        :return: 
+        :return: void
         """
 
         # Init PID
@@ -357,8 +354,8 @@ class Robot:
             pid.update(errorValue)
             controlVariable = pid.output
 
-            rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
-            errorValuePrev = errorValue
+            # rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
+            # errorValuePrev = errorValue
 
             self.vel.linear.x = self.ROBOTMOVESPEED
             # Applying the PID output as robot rotation
@@ -371,7 +368,9 @@ class Robot:
                 # Turn the robot 90° if wall is in front
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
-                self.allignToWall(10)
+
+                numberDatapointsFromSide = 10
+                self.allignToWall(numberDatapointsFromSide)
 
             self.velPub.publish(self.vel)
             self.rate.sleep()
@@ -394,12 +393,15 @@ class Robot:
             if (self.phase == "SearchApproachWall"):
                 rospy.loginfo("Phase: SearchApproachWall")
 
+                # Rotate robot to estimated best direction
                 datapointGroups = self.classifyDatapoints()
                 absoluteIdxBestDatapoint = self.getAbsoluteIdxBestDatapoint(datapointGroups)
                 rotDegree = self.calcRotationForBestDatapoint(absoluteIdxBestDatapoint)
+                self.rotateRobotDegree(rotDegree)
 
-                self.rotateRobotDegree(rotDegree, 0.2)
-                self.moveStraightInfrontOfWall(10)
+                # Move robot straight forward
+                numberDatapointsFromMiddle = 10
+                self.moveStraightInfrontOfWall(numberDatapointsFromMiddle)
 
                 self.phase = "FollowWall"
 
