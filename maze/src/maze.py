@@ -236,7 +236,7 @@ class Robot:
         :param numberDatapoints: Number of data points in each group. Must divide the laser data without remainder!
         :return: List of sublists for the single groups.
         """
-        if (numberDatapoints % len(self.laser) == 0):
+        if (len(self.laser) % numberDatapoints == 0):
             datapointGroups = [self.laser[x:x + numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
             return datapointGroups
         else:
