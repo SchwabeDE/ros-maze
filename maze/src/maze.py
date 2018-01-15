@@ -234,20 +234,42 @@ class Robot:
     "PHASE 2 - FOLLOW WALL"
 
     def getEqualsizedDatapointGroups(self, numberDatapoints):
-
-        if(numberDatapoints % len(self.laser) == 0):
-            datapointGroups = [self.laser[x:x+numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
+        """
+        Slices the laser data into equally big groups. Groupsize is determined by the specified argument.
+        :param numberDatapoints: Number of data points in each group. Must divide the laser data without remainder!
+        :return: List of sublists for the single groups.
+        """
+        if (numberDatapoints % len(self.laser) == 0):
+            datapointGroups = [self.laser[x:x + numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
             return datapointGroups
         else:
-            rospy.logerr("getEqualsizedDatapointGroups must be divisible without remainder by its argument numberDatapoints")
+            rospy.logerr(
+                "getEqualsizedDatapointGroups must be divisible without remainder by its argument numberDatapoints")
             return None
 
     def calcAvgDist(self, datapoints):
+        """
+        Calculate the average distance of the data points.
+        :param datapoints: Range data points for calculating the average value.
+        :return: Average value.
+        """
         return sum(datapoints) / float(len(datapoints))
 
-    def allignToWall(self, numberDatapoints=10):
+    def allignToWall(self, numberDatapoints):
+        """
+        Rotates the robot until it is approximately facing in a 90° angle away from the wall.
+        This angle is determined by using the sensor data of the robot sides.
+        :param numberDatapoints: Number of data points to use at the robot side. 
+        :return: void
+        """
 
-        def calcIdxSmallestAvgDist(datapointGroups):
+        def getIdxSmallestAvgDist(datapointGroups):
+            """
+            Returns the index of the data point group with the smallest average distance from the wall. 
+            :param datapointGroups: List of sublists for the single groups. 
+            :return: Index of the data point group with the smallest average distance.
+            """
+            # Set it to the biggest possible value
             smallestAvg = max(self.laser)
             smallestAvgGroupIdx = -1
             for currIdx, dpGroup in enumerate(datapointGroups):
@@ -256,16 +278,18 @@ class Robot:
                 if (currAvg < smallestAvg):
                     smallestAvgGroupIdx = currIdx
                     smallestAvg = currAvg
-            rospy.loginfo("smallestAvgGroupIdx: " + str(smallestAvgGroupIdx))
             return smallestAvgGroupIdx
 
-        speed = self.ROBOTROTATIONSPEED
+        rotationSpeed = self.ROBOTROTATIONSPEED
 
         if (self.followWallDirection == "left"):
+            # Use sensor data from the right side of the robot to align it for facing to the left
             targetGroupIdx = 0
         elif (self.followWallDirection == "right"):
+            # Use sensor data from the left side of the robot to align it for facing to the right.
+            # Also change rotation direction.
             targetGroupIdx = len(self.getEqualsizedDatapointGroups(numberDatapoints)) - 1
-            speed *= -1
+            rotationSpeed *= -1
         else:
             rospy.logerr("Incorrect followWallDirection parameter.")
 
@@ -275,19 +299,26 @@ class Robot:
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(numberDatapoints)
             avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
 
-            if (calcIdxSmallestAvgDist(equalsizedDatapointGroups) == targetGroupIdx and prevAvg > avgDist):
+            if (getIdxSmallestAvgDist(equalsizedDatapointGroups) == targetGroupIdx and prevAvg > avgDist):
                 # Add some delay for fine adjustment
                 rospy.sleep(rospy.Duration(1, 0))
                 break
             prevAvg = avgDist
 
-            self.vel.angular.z = speed
+            self.vel.angular.z = rotationSpeed
             self.velPub.publish(self.vel)
             self.rate.sleep()
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
     def followWall(self):
+        """
+        Enables the robot to follow the wall.
+        The distance from the robot side to the wall is measured and compared with the target distance.
+        A PID controller ensures that this distance can be adhered to with relatively small fluctuation.
+        If a wall is detected in front of the robot, it will rotate for 90° to the specified direction.
+        :return: 
+        """
 
         # Init PID
         # previously best tested Values #1: P=0.5, I=0.0, D=1.6
@@ -302,8 +333,7 @@ class Robot:
         errorValuePrev = 0
 
         while (True):
-
-            # Calculate the avg distance from the robot site to the wall
+            # Calculate the avg distance from the robot side to the wall
             datapointsInGroup = 90
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapointsInGroup)
 
@@ -312,7 +342,8 @@ class Robot:
                 targetGroupIdx = 0
                 followWallDirectionAdjustment = 1
             elif (self.followWallDirection == "right"):
-                # Use sensor data from the left side of the robot to follow the wall to the right
+                # Use sensor data from the left side of the robot to follow the wall to the right.
+                # Also change rotation direction.
                 targetGroupIdx = len(equalsizedDatapointGroups) - 1
                 followWallDirectionAdjustment = -1
             else:
@@ -330,16 +361,17 @@ class Robot:
             errorValuePrev = errorValue
 
             self.vel.linear.x = self.ROBOTMOVESPEED
+            # Applying the PID output as robot rotation
             self.vel.angular.z = controlVariable * followWallDirectionAdjustment
 
-            # Wall is in front
+            # Check if wall is in front of robot
             numberDatapointsFromMiddle = 180
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
-
             if (minMiddleDatapoints <= self.WALLDISTANCE):
+                # Turn the robot 90° if wall is in front
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
-                self.allignToWall()
+                self.allignToWall(10)
 
             self.velPub.publish(self.vel)
             self.rate.sleep()
