@@ -205,15 +205,19 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
-    def getMinMiddleDatapoints(self, datapointNumber=30):
+    def getMinMiddleDatapoints(self, numberDatapoints):
+        """
+        Takes the specified amount of range data points from the middle laser scanner data and returns the minimal value.
+        :param numberDatapoints: Number of data points to use from the middle.
+        :return: Smallest range data point in specified interval.
+        """
         listMiddleIdx = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddleIdx - (datapointNumber / 2): listMiddleIdx + (datapointNumber / 2)]
+        relevantDatapoints = self.laser[listMiddleIdx - (numberDatapoints / 2): listMiddleIdx + (numberDatapoints / 2)]
         return min(relevantDatapoints)
 
-    def moveStraightBeforeWall(self, speed, numberDatapoints=10):
+    def moveStraightInfrontOfWall(self, numberDatapoints):
         """
         Move the robot straight in front of the wall and stop at specified distance.
-        :param speed: Move speed
         :param numberDatapoints: Number of data points to use.
         :return: void
         """
@@ -224,14 +228,12 @@ class Robot:
                 self.velPub.publish(self.vel)
                 return
             else:
-                self.vel.linear.x = speed
+                self.vel.linear.x = self.ROBOTMOVESPEED
                 self.velPub.publish(self.vel)
 
     "PHASE 2 - FOLLOW WALL"
 
-    def getEqualsizedDatapointGroups(self, numberDatapoints=30):
-        # Put laser scanner data points in euqally large groups
-
+    def getEqualsizedDatapointGroups(self, numberDatapoints):
         datapointGroups = [self.laser[x:x+numberDatapoints] for x in range(0, len(self.laser), numberDatapoints)]
         return datapointGroups
 
@@ -360,7 +362,7 @@ class Robot:
                 rotDegree = self.calcRotationForBestDatapoint(absoluteIdxBestDatapoint)
 
                 self.rotateRobotDegree(rotDegree, 0.2)
-                self.moveStraightBeforeWall(0.3)
+                self.moveStraightInfrontOfWall(10)
 
                 self.phase = "FollowWall"
 
