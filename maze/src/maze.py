@@ -18,7 +18,7 @@ class Robot:
     """
 
     def __init__(self):
-        rospy.init_node('maze')
+        rospy.init_node('maze_nv-171738')
         self.rate = rospy.Rate(20)
 
         # Subscriber
@@ -32,7 +32,7 @@ class Robot:
         self.vel = Twist()
 
         # Settings
-        self.WALLDISTANCE = 0.5
+        self.WALLDISTANCE = 0.3
         self.ERRORMARGIN = 0.000001
         self.ROBOTMOVESPEED = 0.3
         self.ROBOTROTATIONSPEED = 0.2
@@ -147,10 +147,10 @@ class Robot:
 
         return yawDegree
 
-    def rotateRobotDegree(self, requestTurnDegree):
+    def rotateRobotDegree(self, rotateDegree):
         """
         Rotate the robot yaw for the specified degree.
-        :param requestTurnDegree: 
+        :param rotateDegree: Angle the robot is rotated.
         :return: void
         """
         # Overflow (underflow) occurs when numbers are outside of inverval [0;360]
@@ -158,12 +158,12 @@ class Robot:
         fluctuationTheshold = 10
 
         currYawDegree = self.getCurrYawDegree()
-        degreeTarget = currYawDegree + requestTurnDegree
+        degreeTarget = currYawDegree + rotateDegree
 
         speed = self.ROBOTROTATIONSPEED
 
         # Rotate positive degree
-        if (requestTurnDegree > 0):
+        if (rotateDegree > 0):
             while (currYawDegree < degreeTarget):
                 prevYawDegree = currYawDegree
                 # Adjust the current degree for overflow error
@@ -179,7 +179,7 @@ class Robot:
                 if (currYawDegree + fluctuationTheshold < prevYawDegree):
                     overflow = True
 
-        elif (requestTurnDegree < 0):
+        elif (rotateDegree < 0):
             while (currYawDegree > degreeTarget):
                 prevYawDegree = currYawDegree
                 # Adjust the current degree for overflow error
@@ -202,24 +202,24 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
-    def getMinMiddleDatapoints(self, numberDatapoints):
+    def getMinMiddleDatapoints(self, numberDatapointsFromMiddle):
         """
         Takes the specified amount of range data points from the middle laser scanner data and returns the minimal value.
-        :param numberDatapoints: Number of data points to use from the middle.
+        :param numberDatapointsFromMiddle: Number of data points to use from the laser sensor middle.
         :return: Smallest range data point in specified interval.
         """
         listMiddleIdx = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddleIdx - (numberDatapoints / 2): listMiddleIdx + (numberDatapoints / 2)]
+        relevantDatapoints = self.laser[listMiddleIdx - (numberDatapointsFromMiddle / 2): listMiddleIdx + (numberDatapointsFromMiddle / 2)]
         return min(relevantDatapoints)
 
-    def moveStraightInfrontOfWall(self, numberDatapoints):
+    def moveStraightInfrontOfWall(self, numberDatapointsFromMiddle):
         """
         Move the robot straight in front of the wall and stop at specified distance.
-        :param numberDatapoints: Number of data points to use.
+        :param numberDatapointsFromMiddle: Number of data points to use from the laser sensor middle.
         :return: void
         """
         while (True):
-            minDist = self.getMinMiddleDatapoints(numberDatapoints)
+            minDist = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
             if (minDist <= self.WALLDISTANCE):
                 self.vel.linear.x = 0.0
                 self.velPub.publish(self.vel)
@@ -252,11 +252,11 @@ class Robot:
         """
         return sum(datapoints) / float(len(datapoints))
 
-    def allignToWall(self, numberDatapoints):
+    def allignToWall(self, numberDatapointsFromSide):
         """
         Rotates the robot until it is approximately facing in a 90° angle away from the wall.
         This angle is determined by using the sensor data of the robot sides.
-        :param numberDatapoints: Number of data points to use at the robot side. 
+        :param numberDatapointsFromSide: Number of data points to use at the laser sensor side (left/right). 
         :return: void
         """
 
@@ -285,7 +285,7 @@ class Robot:
         elif (self.followWallDirection == "right"):
             # Use sensor data from the left side of the robot to align it for facing to the right.
             # Also change rotation direction.
-            targetGroupIdx = len(self.getEqualsizedDatapointGroups(numberDatapoints)) - 1
+            targetGroupIdx = len(self.getEqualsizedDatapointGroups(numberDatapointsFromSide)) - 1
             rotationSpeed *= -1
         else:
             rospy.logerr("Incorrect followWallDirection parameter.")
@@ -293,7 +293,7 @@ class Robot:
         prevAvg = 0
 
         while (True):
-            equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(numberDatapoints)
+            equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(numberDatapointsFromSide)
             avgDist = self.calcAvgDist(equalsizedDatapointGroups[targetGroupIdx])
 
             if (getIdxSmallestAvgDist(equalsizedDatapointGroups) == targetGroupIdx and prevAvg > avgDist):
@@ -308,12 +308,14 @@ class Robot:
         self.vel.angular.z = 0.0
         self.velPub.publish(self.vel)
 
-    def followWall(self):
+    def followWall(self, numberDatapointsFromMiddle, numberDatapointsFromSide):
         """
         Enables the robot to follow the wall.
         The distance from the robot side to the wall is measured and compared with the target distance.
         A PID controller ensures that this distance can be adhered to with relatively small fluctuation.
         If a wall is detected in front of the robot, it will rotate for 90° to the specified direction.
+        :param numberDatapointsFromMiddle: Number of data points to use from the laser sensor middle.
+        :param numberDatapointsFromSide: Number of data points to use at the laser sensor side (left/right). 
         :return: void
         """
 
@@ -324,7 +326,7 @@ class Robot:
         I = 0
         D = 1.4
         pid = PID.PID(P, I, D)
-        pid.SetPoint = 0.0
+        pid.SetPoint = self.WALLDISTANCE
         pid.setSampleTime(0.0)
 
         errorValuePrev = 0
@@ -350,8 +352,7 @@ class Robot:
             minDistWallfollowSide = min(equalsizedDatapointGroups[targetGroupIdx])
 
             # PID control cycle
-            errorValue = minDistWallfollowSide - self.WALLDISTANCE
-            pid.update(errorValue)
+            pid.update(minDistWallfollowSide)
             controlVariable = pid.output
 
             # rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
@@ -362,14 +363,12 @@ class Robot:
             self.vel.angular.z = controlVariable * followWallDirectionAdjustment
 
             # Check if wall is in front of robot
-            numberDatapointsFromMiddle = 180
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
             if (minMiddleDatapoints <= self.WALLDISTANCE):
                 # Turn the robot 90° if wall is in front
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
 
-                numberDatapointsFromSide = 10
                 self.allignToWall(numberDatapointsFromSide)
 
             self.velPub.publish(self.vel)
@@ -380,7 +379,7 @@ class Robot:
     def startRobot(self):
         """
         Main method for controlling the robot.
-        :return: void
+        :return: True if finished successfully or False if not.
         """
         rospy.loginfo("Start!")
 
@@ -408,16 +407,19 @@ class Robot:
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
 
-                self.followWall()
+                numberDatapointsFromMiddle = 180
+                numberDatapointsFromSide = 10
+                self.followWall(numberDatapointsFromMiddle, numberDatapointsFromSide)
 
                 self.phase = "Finish"
 
             elif (self.phase == "Finish"):
                 rospy.loginfo("Finish")
-                return
+                return True
 
             else:
                 rospy.logerr("Phasename does not match any defined phase.")
+                return False
 
             # Sleep to prevent flooding your console
             self.rate.sleep()
