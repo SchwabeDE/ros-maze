@@ -333,6 +333,8 @@ class Robot:
         errorValuePrev = 0
 
         while (True):
+            rospy.loginfo(self.checkForCircle(0.5))
+
             # Calculate the avg distance from the robot side to the wall
             datapointsInGroup = 90
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapointsInGroup)
@@ -378,14 +380,22 @@ class Robot:
     "CIRCLE DETECTION AND REPOSITION"
 
     def saveCurrentRobotPosition(self):
-        odomX = self.odom.position.x
-        odomY = self.odom.position.y
-        self.circleDetectionPositionList.append([odomX, odomY])
+        currX = self.odom.position.x
+        currY = self.odom.position.y
+        self.circleDetectionPositionList.append([currX, currY])
         rospy.loginfo("Current robot pos:")
         rospy.loginfo(self.circleDetectionPositionList)
 
-    def circleDetection(self):
-        pass
+    def checkForCircle(self, distanceMargin):
+        currX = self.odom.position.x
+        currY = self.odom.position.y
+
+        for pos in self.circleDetectionPositionList:
+            if(pos[0] - distanceMargin <= currX and pos[0] + distanceMargin >= currX
+               and pos[1] - distanceMargin <= currY and pos[1] + distanceMargin >= currY):
+                return True
+        else:
+            return False
 
     "MAIN METHOD"
 
