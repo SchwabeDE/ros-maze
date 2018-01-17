@@ -32,7 +32,7 @@ class Robot:
         self.vel = Twist()
 
         # Settings
-        self.WALLDISTANCE = 0.3
+        self.WALLDISTANCE = 0.5
         self.ERRORMARGIN = 0.000001
         self.ROBOTMOVESPEED = 0.3
         self.ROBOTROTATIONSPEED = 0.2
@@ -41,6 +41,7 @@ class Robot:
         self.phase = "SearchApproachWall"
         # Possible values = "left", "right"
         self.followWallDirection = "left"
+        self.circleDetectionPositionList = []
 
     "SUBSCRIBER CALLBACKS"
 
@@ -374,6 +375,18 @@ class Robot:
             self.velPub.publish(self.vel)
             self.rate.sleep()
 
+    "CIRCLE DETECTION AND REPOSITION"
+
+    def saveCurrentRobotPosition(self):
+        odomX = self.odom.position.x
+        odomY = self.odom.position.y
+        self.circleDetectionPositionList.append([odomX, odomY])
+        rospy.loginfo("Current robot pos:")
+        rospy.loginfo(self.circleDetectionPositionList)
+
+    def circleDetection(self):
+        pass
+
     "MAIN METHOD"
 
     def startRobot(self):
@@ -406,6 +419,8 @@ class Robot:
 
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
+
+                self.saveCurrentRobotPosition()
 
                 numberDatapointsFromMiddle = 180
                 numberDatapointsFromSide = 10
