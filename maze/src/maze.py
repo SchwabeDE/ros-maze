@@ -335,7 +335,10 @@ class Robot:
         errorValuePrev = 0
 
         while (True):
-            rospy.loginfo(self.checkForCircle(0.1))
+            distanceMargin = 1.0
+            if(self.checkForCircle(distanceMargin)):
+                self.repositionRobot()
+                return
 
             # Calculate the avg distance from the robot side to the wall
             datapointsInGroup = 90
@@ -407,6 +410,17 @@ class Robot:
         else:
             return False
 
+    def repositionRobot(self, rotationDegree=45.0):
+        if (self.followWallDirection == "left"):
+            # Use sensor data from the right side of the robot to align it for facing to the left
+            self.rotateRobotDegree(rotationDegree)
+        elif (self.followWallDirection == "right"):
+            # Use sensor data from the left side of the robot to align it for facing to the right.
+            # Also change rotation direction.
+            self.rotateRobotDegree(-rotationDegree)
+
+        self.phase = "SearchApproachWall"
+        return
 
     "MAIN METHOD"
 
@@ -446,8 +460,6 @@ class Robot:
                 numberDatapointsFromMiddle = 180
                 numberDatapointsFromSide = 10
                 self.followWall(numberDatapointsFromMiddle, numberDatapointsFromSide)
-
-                self.phase = "Finish"
 
             elif (self.phase == "Finish"):
                 rospy.loginfo("Finish")
