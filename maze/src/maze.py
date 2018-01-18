@@ -212,7 +212,8 @@ class Robot:
         :return: Smallest range data point in specified interval.
         """
         listMiddleIdx = len(self.laser) / 2
-        relevantDatapoints = self.laser[listMiddleIdx - (numberDatapointsFromMiddle / 2): listMiddleIdx + (numberDatapointsFromMiddle / 2)]
+        relevantDatapoints = self.laser[listMiddleIdx - (numberDatapointsFromMiddle / 2): listMiddleIdx + (
+        numberDatapointsFromMiddle / 2)]
         return min(relevantDatapoints)
 
     def moveStraightInfrontOfWall(self, numberDatapointsFromMiddle):
@@ -335,8 +336,9 @@ class Robot:
         errorValuePrev = 0
 
         while (True):
+            # Circle detection
             distanceMargin = 1.0
-            if(self.checkForCircle(distanceMargin)):
+            if (self.checkForCircle(distanceMargin)):
                 self.repositionRobot()
                 return
 
@@ -385,14 +387,23 @@ class Robot:
     "CIRCLE DETECTION AND REPOSITION"
 
     def saveCurrentRobotPosition(self):
+        """
+        Reads the x and y coordinate of the current robot position from odom and appends them together in a sublist.
+        List format: circleDetectionPositionList[ [currX, currY] ]
+        :return: void
+        """
         currX = self.odom.position.x
         currY = self.odom.position.y
         self.circleDetectionPositionList.append([currX, currY])
 
-        rospy.loginfo("Current robot pos:")
-        rospy.loginfo(self.circleDetectionPositionList)
-
     def checkForCircle(self, distanceMargin):
+        """
+        Checks the current robot position with all saved positions. A distance margin is added to ease detection.
+        To ensure that the robot is not immediately detected after a new position was saved, this method will
+        only return True when currently a circle was detected but in the previous iteration is was not (rising edge).
+        :param distanceMargin: Determines the area around the saved robot position in which a circle is detected.
+        :return: True when a circle was detected.
+        """
         currX = self.odom.position.x
         currY = self.odom.position.y
 
@@ -400,23 +411,27 @@ class Robot:
         self.currCircleDetected = False
 
         for pos in self.circleDetectionPositionList:
-            if(pos[0] - distanceMargin <= currX and pos[0] + distanceMargin >= currX
-               and pos[1] - distanceMargin <= currY and pos[1] + distanceMargin >= currY):
-                    self.currCircleDetected = True
+            # Both currX and currY must be inside the intervall [savedPoint - distanceMargin; savedPoint + distanceMargin]
+            if (pos[0] - distanceMargin <= currX and pos[0] + distanceMargin >= currX
+                and pos[1] - distanceMargin <= currY and pos[1] + distanceMargin >= currY):
+                self.currCircleDetected = True
 
-        rospy.loginfo("self.currCircleDetected: " + str(self.currCircleDetected))
-        if(self.currCircleDetected and not self.prevCircleDetected):
+        if (self.currCircleDetected and not self.prevCircleDetected):
+            # Only return True on a rising edge
             return True
         else:
             return False
 
     def repositionRobot(self, rotationDegree=45.0):
+        """
+        Rotates the robot away from the wall/object and starts over with SearchApproachWall phase.
+        :param rotationDegree: Degree to rotate away from the wall/object. 
+        :return: void.
+        """
+        # Rotate the robot away from the wall/object based on the direction it was moving.
         if (self.followWallDirection == "left"):
-            # Use sensor data from the right side of the robot to align it for facing to the left
             self.rotateRobotDegree(rotationDegree)
         elif (self.followWallDirection == "right"):
-            # Use sensor data from the left side of the robot to align it for facing to the right.
-            # Also change rotation direction.
             self.rotateRobotDegree(-rotationDegree)
 
         self.phase = "SearchApproachWall"
@@ -455,6 +470,7 @@ class Robot:
             elif (self.phase == "FollowWall"):
                 rospy.loginfo("Phase: FollowWall")
 
+                # Necessary for circle detection
                 self.saveCurrentRobotPosition()
 
                 numberDatapointsFromMiddle = 180
