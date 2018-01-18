@@ -40,7 +40,7 @@ class Robot:
         # Phases
         self.phase = "SearchApproachWall"
         # Possible values = "left", "right"
-        self.followWallDirection = "left"
+        self.followWallDirection = "right"
         self.circleDetectionPositionList = []
         self.prevCircleDetected = True
         self.currCircleDetected = True
@@ -64,6 +64,15 @@ class Robot:
         self.laser = data.ranges
 
     "PHASE 1 - SEARCH AND APPROACH WALL"
+
+    def followWallDirectionHeuristic(self):
+        rightGroup = self.laser[0:len(self.laser) / 2]
+        leftGroup = self.laser[len(self.laser) / 2:]
+
+        if (max(rightGroup) >= max(leftGroup)):
+            self.followWallDirection = "right"
+        else:
+            self.followWallDirection = "left"
 
     def classifyDatapoints(self, ptpDistanceThreshold=0.1):
         """
@@ -213,7 +222,7 @@ class Robot:
         """
         listMiddleIdx = len(self.laser) / 2
         relevantDatapoints = self.laser[listMiddleIdx - (numberDatapointsFromMiddle / 2): listMiddleIdx + (
-        numberDatapointsFromMiddle / 2)]
+            numberDatapointsFromMiddle / 2)]
         return min(relevantDatapoints)
 
     def moveStraightInfrontOfWall(self, numberDatapointsFromMiddle):
@@ -454,6 +463,8 @@ class Robot:
         while not rospy.is_shutdown():
             if (self.phase == "SearchApproachWall"):
                 rospy.loginfo("Phase: SearchApproachWall")
+
+                self.followWallDirectionHeuristic()
 
                 # Rotate robot to estimated best direction
                 datapointGroups = self.classifyDatapoints()
