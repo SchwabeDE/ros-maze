@@ -51,7 +51,7 @@ class Robot:
         """
         Get relevant odom data (relevant sublists: position(x,y) and orientation(x,y,z,w)).
         :param data: /odom topic data
-        :return: position(x,y) and orientation(x,y,z,w)
+        :return: void
         """
         self.odom = data.pose.pose
 
@@ -66,6 +66,11 @@ class Robot:
     "PHASE 1 - SEARCH AND APPROACH WALL"
 
     def followWallDirectionHeuristic(self):
+        """
+        The laser data is split in the middle into two groups. 
+        The robot will then follow the direction of the group with the biggest maximum value.
+        :return: void
+        """
         rightGroup = self.laser[0:len(self.laser) / 2]
         leftGroup = self.laser[len(self.laser) / 2:]
 
