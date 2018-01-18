@@ -42,6 +42,8 @@ class Robot:
         # Possible values = "left", "right"
         self.followWallDirection = "left"
         self.circleDetectionPositionList = []
+        self.prevCircleDetected = True
+        self.currCircleDetected = True
 
     "SUBSCRIBER CALLBACKS"
 
@@ -333,7 +335,7 @@ class Robot:
         errorValuePrev = 0
 
         while (True):
-            rospy.loginfo(self.checkForCircle(0.5))
+            rospy.loginfo(self.checkForCircle(0.1))
 
             # Calculate the avg distance from the robot side to the wall
             datapointsInGroup = 90
@@ -383,6 +385,7 @@ class Robot:
         currX = self.odom.position.x
         currY = self.odom.position.y
         self.circleDetectionPositionList.append([currX, currY])
+
         rospy.loginfo("Current robot pos:")
         rospy.loginfo(self.circleDetectionPositionList)
 
@@ -390,12 +393,20 @@ class Robot:
         currX = self.odom.position.x
         currY = self.odom.position.y
 
+        self.prevCircleDetected = self.currCircleDetected
+        self.currCircleDetected = False
+
         for pos in self.circleDetectionPositionList:
             if(pos[0] - distanceMargin <= currX and pos[0] + distanceMargin >= currX
                and pos[1] - distanceMargin <= currY and pos[1] + distanceMargin >= currY):
-                return True
+                    self.currCircleDetected = True
+
+        rospy.loginfo("self.currCircleDetected: " + str(self.currCircleDetected))
+        if(self.currCircleDetected and not self.prevCircleDetected):
+            return True
         else:
             return False
+
 
     "MAIN METHOD"
 
