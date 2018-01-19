@@ -4,12 +4,12 @@
 # import dependencies
 import rospy
 import PID
+from tf.transformations import euler_from_quaternion
 
 # import messages
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
-from tf.transformations import euler_from_quaternion
 
 
 class Robot:
@@ -33,7 +33,6 @@ class Robot:
 
         # Settings
         self.WALLDISTANCE = 0.5
-        self.ERRORMARGIN = 0.000001
         self.ROBOTMOVESPEED = 0.3
         self.ROBOTROTATIONSPEED = 0.2
 
@@ -97,11 +96,11 @@ class Robot:
             else:
                 relIdx = idx - len(rangeList)
 
-                # calculate average(arithmetic mean)
+                # Calculate average(arithmetic mean)
                 avg = sum(rangeList) / float(len(rangeList))
-                # calculate variance
+                # Calculate variance
                 var = sum(map(lambda x: (x - avg) ** 2, rangeList))
-                # calculate standard deviation
+                # Calculate standard deviation
                 std = ((1 / float(len(rangeList))) * var) ** 0.5
 
                 dpGroup = [rangeList, relIdx, avg, std]
@@ -123,12 +122,11 @@ class Robot:
         idxBestScore = 0
         for idx, datapointGroup in enumerate(datapointGroups):
             if (len(datapointGroup[0]) >= minPointsThreshold):
-                # number of datapoints and average must be normalized
+                # Number of datapoints and average must be normalized
                 scoreLen = len(datapointGroup[0]) / float(len(self.laser))
                 scoreAvg = datapointGroup[2] / max(self.laser)
                 scoreStd = 1.0 - datapointGroup[3]
                 scoreSum = scoreLen + scoreAvg + scoreStd
-                # rospy.loginfo("scoreSum: " + str(scoreSum))
 
                 if (scoreSum > bestScore):
                     idxBestScore = idx
@@ -177,8 +175,6 @@ class Robot:
         currYawDegree = self.getCurrYawDegree()
         degreeTarget = currYawDegree + rotateDegree
 
-        speed = self.ROBOTROTATIONSPEED
-
         # Rotate positive degree
         if (rotateDegree > 0):
             while (currYawDegree < degreeTarget):
@@ -189,7 +185,7 @@ class Robot:
                 else:
                     currYawDegree = self.getCurrYawDegree()
 
-                self.vel.angular.z = speed
+                self.vel.angular.z = self.ROBOTROTATIONSPEED
                 self.velPub.publish(self.vel)
 
                 # Overflow detection
@@ -205,15 +201,14 @@ class Robot:
                 else:
                     currYawDegree = self.getCurrYawDegree()
 
-                self.vel.angular.z = speed * -1
+                self.vel.angular.z = -self.ROBOTROTATIONSPEED
                 self.velPub.publish(self.vel)
 
                 # Overflow detection
                 if (currYawDegree - fluctuationTheshold > prevYawDegree):
                     overflow = True
         else:
-            # nothing to do
-            # rospy.loginfo("Nothing to do")
+            # Nothing to do
             return
 
         self.vel.angular.z = 0.0
@@ -347,8 +342,6 @@ class Robot:
         pid.SetPoint = self.WALLDISTANCE
         pid.setSampleTime(0.0)
 
-        errorValuePrev = 0
-
         while (True):
             # Circle detection
             distanceMargin = 1.0
@@ -356,7 +349,7 @@ class Robot:
                 self.repositionRobot()
                 return
 
-            # Calculate the avg distance from the robot side to the wall
+            # Calculate the avg distance from the robot side to the wall.
             datapointsInGroup = 90
             equalsizedDatapointGroups = self.getEqualsizedDatapointGroups(datapointsInGroup)
 
@@ -373,18 +366,14 @@ class Robot:
                 rospy.logerr("Incorrect followWallDirection parameter.")
                 return
 
-            minDistWallfollowSide = min(equalsizedDatapointGroups[targetGroupIdx])
+            self.vel.linear.x = self.ROBOTMOVESPEED
 
             # PID control cycle
+            # Update PID with the minimal distance from the robot side (measured process value).
+            minDistWallfollowSide = min(equalsizedDatapointGroups[targetGroupIdx])
             pid.update(minDistWallfollowSide)
-            controlVariable = pid.output
-
-            # rospy.loginfo("ERRORDIFF: " + str(errorValue - errorValuePrev))
-            # errorValuePrev = errorValue
-
-            self.vel.linear.x = self.ROBOTMOVESPEED
-            # Applying the PID output as robot rotation
-            self.vel.angular.z = controlVariable * followWallDirectionAdjustment
+            # Applying the PID output (control variable) as robot rotation.
+            self.vel.angular.z = pid.output * followWallDirectionAdjustment
 
             # Check if wall is in front of robot
             minMiddleDatapoints = self.getMinMiddleDatapoints(numberDatapointsFromMiddle)
