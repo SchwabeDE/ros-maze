@@ -16,7 +16,12 @@ The project is developed in Python language, using the Robot Operation System (R
         - [Clone and build the Project Repository](#clone-and-build-the-project-repository)
     - [Run the Project](#run-the-project)
         - [Prepare Gazebo and Run the Project](#prepare-gazebo-and-run-the-project)
+- [Project Goal](#project-goal)
 - [Functional Principle](#functional-principle)
+    - [Search and Approach Wall](#search-and-approach-wall)
+    - [Follow Wall](#follow-wall)
+    - [Circle Detection and Repositioning](#circle-detection-and-repositioning)
+    - [Follow Wall Direction Heuristic](#follow-wall-direction-heuristic)
 - [Author](#author)
 - [Acknowledgments](#acknowledgments)
     - [Ivmech PID Controller](#ivmech-pid-controller)
@@ -71,7 +76,6 @@ and you will have a new stable topic that gets the laser data from the new scann
 
 * [ ] Launch the `turtlebot_gazebo` package and hopefully, you should see your new turtlebot with enhanced superpowers like below and you should be able to see the scan data in the `/laserscan` topic.
 
-![Hokuyo Laser Scanner](readme_files/turtlebot_hokuyo_small.png)
 
 #### Create Catkin Workspace
 
@@ -116,9 +120,50 @@ rosrun gazebo_ros spawn_model -file ~/catkin_ws/src/nv-171738_tier4/maze_practic
 roslaunch maze maze.launch
 ```
 
+## Project Goal
+
+The goal of this project is to escape out of a previously unknown maze.
+The robot spawns somewhere inside this maze and must leave it without bumping against a wall or any other object.
+It is not necessary for the robot to stop once it left the maze.
+
+Below is a screenshot showing an example maze. The goal is depicted as a red cross.
+
+![Project Goal](readme_files/goal.png)
+
 ## Functional Principle
 
-TODO
+This section describes the internal algorithms used in this project.
+
+### Search and Approach Wall
+
+#### Summary:
+
+Evaluate the laser data to find the best suitable wall, turn the robot in its direction, approach it and stop in front of it.
+
+#### Steps:
+1. Get laser data from topic `/laserscan` 
+1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (offset). 
+Connected data points are determined based on a threshold of their distance from each other.
+The picture below shows an example of classified data points into 6 groups.
+
+![Classified Datapoints](readme_files/classifiedDatapoints.png)
+
+1. Calculate the relative index of the first element (regarding all laserscan values), 
+average (arithmetic mean) and standard deviation of each data point group and add to list.
+1. Choose list with preferably most elements, furthermost average distance and lowest standard deviation.
+This approach makes it very likely that a data point group referring to a wall instead of another object is chosen.
+1. Get absolute index of the middle point from the chosen data point group.
+1. Calculate the required rotation of the robot in degree to face this middle data point.
+1. Let the robot rotate based on `/odom` quaternion data. The quaternion data must be converted into degree for doing so.
+1. Approach the wall until a distance from the wall threshold is reached, then stop.
+
+![Search and Approach Wall](readme_files/searchApproachWall.png)
+
+### Follow Wall
+
+### Circle Detection and Repositioning
+
+### Follow Wall Direction Heuristic
 
 ## Author
 
