@@ -157,7 +157,7 @@ This approach makes it very likely that a data point group referring to a wall i
 1. Let the robot rotate based on `/odom` quaternion data. The quaternion data must be converted into degree for doing so.
 1. Approach the wall until a distance from the wall threshold is reached, then stop.
 
-![Search and Approach Wall](readme_files/searchApproachWall.png)
+![Search and Approach Wall](readme_files/searchApproachWall.gif)
 
 ### Follow Wall
 
