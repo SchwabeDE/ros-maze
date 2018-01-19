@@ -13,13 +13,13 @@ The project is developed in Python language, using the Robot Operation System (R
         - [Mount Hokuyo Laser Scanner onto the Turtlebot](#mount-hokuyo-laser-scanner-onto-the-turtlebot)
         - [Create Catkin Workspace](#create-catkin-workspace)
     - [Install the Project](#install-the-project)
-        - [Clone and build the Project Repository](#Clone-and-build-the-Project-Repository)
-    - [Run the Project](#Run-the-Project)
-        - [Prepare Gazebo and Run the Project](#Prepare-Gazebo-and-Run-the-Project)
-- [Functional Principle](#Functional-Principle)
-- [Author](#Author)
-- [Acknowledgments](#Acknowledgments)
-    - [Ivmech PID Controller](#Ivmech-PID-Controller)
+        - [Clone and build the Project Repository](#clone-and-build-the-project-repository)
+    - [Run the Project](#run-the-project)
+        - [Prepare Gazebo and Run the Project](#prepare-gazebo-and-run-the-project)
+- [Functional Principle](#functional-principle)
+- [Author](#author)
+- [Acknowledgments](#acknowledgments)
+    - [Ivmech PID Controller](#ivmech-pid-controller)
         
 
 ## Getting Started
