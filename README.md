@@ -144,7 +144,7 @@ Evaluate the laser data to find the best suitable wall, turn the robot in its di
 1. Get laser data from topic `/laserscan` 
 1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (offset). 
 Connected data points are determined based on a threshold of their distance from each other.
-The picture below shows an example of classified data points into 6 groups.
+The picture below shows an example of classified data points marked with a frame.
 
 ![Classified Datapoints](readme_files/classifiedDatapoints.png)
 
@@ -160,6 +160,31 @@ This approach makes it very likely that a data point group referring to a wall i
 ![Search and Approach Wall](readme_files/searchApproachWall.gif)
 
 ### Follow Wall
+
+#### Summary:
+The robot must detect and follow the wall. It must circuit any object on its way. Further it must retain the same distance to the wall/obstacles by using a PID controller. 
+
+#### Steps:
+
+**Follow wall or other elements until obstacle in front:**
+1. Split the laser data into equal sized groups. 
+Then determine the *target group* based on the wall follow direction (left/right) and get its minimum distance to an object (wall/obstacle).
+1. Implement a *PID controller* (external code) in a second python-file.
+1. Initialize the PID controller with the desired wall distance set point. 
+Let it then determine the control variable by updating it with the current minimum object distance value. 
+The control variable is then used for the robot rotation. The forward robot speed is a constant value.
+
+![Follow Wall until Obstacle](readme_files/followWallUntilObstacle.gif)
+
+**Align the robot when obstacle is in front:**
+1. Get laser values from the middle and determine the minimum distance of the closest object in front of the robot.
+1. Align the robot when an obstacle is closer than the desired wall distance.
+First split the laser data into equal sized groups and determine the target group based on the wall follow direction. 
+Then determine the index of the group with the smallest average distance and also the previous and current average distance of the target group.
+In order to achieve an approximately 90° angle to the obstacle, 
+let the robot rotate until the index of the smallest group equals the index of the target group and the previous average distance of the target group is bigger than its current average distance.
+
+![Allign Robot to Obstacle](readme_files/allignRobotToObstacle.gif)
 
 ### Circle Detection and Repositioning
 
