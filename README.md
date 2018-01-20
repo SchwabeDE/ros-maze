@@ -203,6 +203,19 @@ The circle detection recognizes this and lets the robot move to a disconnected p
 
 ### Follow Wall Direction Heuristic
 
+#### Summary:
+To figure out whether the robot should initially follow the wall to the left or the right a simple heuristic can be used.
+The laser data is split in the middle into two groups. The robot will then follow the direction of the group with the biggest maximum value.
+
+#### Steps:
+
+1. Split laser data into two groups and get their maximum value.
+1. Set the wall follow direction according to the group with the biggest maximum value.
+
+In the image below you can see the maximum value in the left group, therefore the robot will initially follow the wall to the left.
+
+![Follow Wall Direction Heuristic](readme_files/followWallDirectionHeuristic.png)
+
 ## Author
 
 * **Nico Vinzenz** (*nv-171738*)
