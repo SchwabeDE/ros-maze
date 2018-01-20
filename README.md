@@ -144,6 +144,7 @@ Evaluate the laser data to find the best suitable wall, turn the robot in its di
 1. Get laser data from topic `/laserscan` 
 1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (offset). 
 Connected data points are determined based on a threshold of their distance from each other.
+
 The picture below shows an example of classified data points marked with a frame.
 
 ![Classified Datapoints](readme_files/classifiedDatapoints.png)
