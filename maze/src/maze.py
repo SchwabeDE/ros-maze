@@ -344,7 +344,7 @@ class Robot:
 
         while (True):
             # Circle detection
-            distanceMargin = 1.0
+            distanceMargin = 0.6
             if (self.checkForCircle(distanceMargin)):
                 self.repositionRobot()
                 return
