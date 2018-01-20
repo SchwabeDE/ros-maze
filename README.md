@@ -188,6 +188,19 @@ let the robot rotate until the index of the smallest group equals the index of t
 
 ### Circle Detection and Repositioning
 
+#### Summary:
+It may happen that the robot follows a wall/object which is isolated from the remaining maze, thus letting the robot move in circles and making it unable to leave the maze. 
+The circle detection recognizes this and lets the robot move to a disconnected part of the maze.
+
+#### Steps:
+
+1. Save absolute robot position based on `odom` data in a list whenever the robot enters the *Follow Wall* phase.
+1. Continuously check the current robot position with the saved position points. A margin must be added to the saved data points for easing detection.
+1. Ensure that the robot is not immediately detected but has to leave the saved position point first.
+1. If a circle is detected, turn the robot 45° away from the current following wall/object and goto phase *Search and Approach Wall*
+
+![Circle Detection and Repositioning](readme_files/circleDetectionAndRepositioning.gif)
+
 ### Follow Wall Direction Heuristic
 
 ## Author
