@@ -35,13 +35,13 @@ These instructions will guide you step by step how the get this project running 
 
 Instructions in order to satisfy the prerequisites for installing the project.
 
-#### Step 1: Native ROS on your System
+#### Step 1 Native ROS on your System
 
 **Warning! Please use Ubuntu 16.04 as this is the Long Term Support Version (LTS). If you are using Ubuntu 17.04 you have to use ROS Lunar release on your own risk!**
 
 * Goto http://wiki.ros.org/kinetic/Installation/Ubuntu and follow the instructions there. The installation can take some time depending on your internet connection.
 
-#### Step 2: Mount Hokuyo Laser Scanner onto the Turtlebot
+#### Step 2 Mount Hokuyo Laser Scanner onto the Turtlebot
 
 With the following instructions the Hokuyo Laser Scanner is mounted on the Turtlebot. 
 After following these instructions, you should be able to visualise the laser ray projections in gazebo, 
@@ -75,7 +75,7 @@ and you will have a new stable topic that gets the laser data from the new scann
   the `export TURTLEBOT_3D_SENSOR` line in the `.bashrc` file.
 
 
-#### Step 3: Create Catkin Workspace
+#### Step 3 Create Catkin Workspace
 
 All your ROS packages must be stored in a special folder called __catkin workspace__.
 ROS uses the [catkin](http://docs.ros.org/api/catkin/html/) build system to manage your codebase.
@@ -96,7 +96,7 @@ source ~/.bashrc
 
 Instructions about how to install the project onto your machine.
 
-#### Step 4: Clone and build the Project Repository
+#### Step 4 Clone and build the Project Repository
 
 * Clone the project into the catkin workspace and build it:
 
@@ -110,7 +110,7 @@ catkin_make
 
 Instructions about how to run the project on your machine.
 
-#### Step 5: Prepare Gazebo and Run the Project
+#### Step 5 Prepare Gazebo and Run the Project
 
 * Launch the simunlation environment gazebo, load a maze into gazebo and launch the project package (nv_171738_maze).
 ```
