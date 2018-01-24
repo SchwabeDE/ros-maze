@@ -18,7 +18,7 @@ class Robot:
     """
 
     def __init__(self):
-        rospy.init_node('maze_nv-171738')
+        rospy.init_node('nv_171738_maze')
         self.rate = rospy.Rate(20)
 
         # Subscriber
