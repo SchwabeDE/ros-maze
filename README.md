@@ -39,7 +39,7 @@ Instructions in order to satisfy the prerequisites for installing the project.
 
 **Warning! Please use Ubuntu 16.04 as this is the Long Term Support Version (LTS). If you are using Ubuntu 17.04 you have to use ROS Lunar release on your own risk!**
 
-Goto http://wiki.ros.org/kinetic/Installation/Ubuntu and follow the instructions there. The installation can take some time depending on your internet connection.
+* Goto http://wiki.ros.org/kinetic/Installation/Ubuntu and follow the instructions there. The installation can take some time depending on your internet connection.
 
 #### Mount Hokuyo Laser Scanner onto the Turtlebot
 
@@ -50,31 +50,29 @@ and you will have a new stable topic that gets the laser data from the new scann
 **The Hokuyo Laser Scanner has a range of 30 m and a forward field of vision of 180 degrees.**
 
 
-* [ ] Delete the existing `turtlebot_description` package using the following commands:
+* Delete the existing `turtlebot_description` package using the following commands:
   ```
   cd /opt/ros/kinetic/share
   sudo rm -r turtlebot_description
   ```
 
-* [ ] Download the modified `turtlebot_description` package from this [link] (https://fbe-gitlab.hs-weingarten.de/mat-iki/amr-mat/blob/master/turtlebot_hokuyo/turtlebot_description.tar.gz) to your `Downloads`
+* Download the modified `turtlebot_description` package from this [link] (https://fbe-gitlab.hs-weingarten.de/mat-iki/amr-mat/blob/master/turtlebot_hokuyo/turtlebot_description.tar.gz) to your `Downloads`
   folder. Extract the package from the compressed file.
 
-* [ ] Move the extracted package from the `Downloads` folder to the location of the deleted package using the following commands:
+* Move the extracted package from the `Downloads` folder to the location of the deleted package using the following commands:
   ```
   cd ~/Downloads
   sudo mv turtlebot_description /opt/ros/kinetic/share
   ```
   If everything went alright, there should be a file named `hokuyo_urdf.xacro` at the location `/opt/ros/kinetic/share/turtlebot_description/urdf/sensors`
 
-* [ ] Run the following commands to setup the new modified turtlebot as the default whenever you launch it in gazebo:
+* Run the following commands to setup the new modified turtlebot as the default whenever you launch it in gazebo:
   ```
   echo "export TURTLEBOT_3D_SENSOR=hokuyo" >> ~/.bashrc
   source ~/.bashrc
   ```
   Note that by doing this, the turtlebot will be launched with hokuyo laser scanner everytime you launch `turtlebot_gazebo`. If you want to go back to how everything was before you did all this, just delete
   the `export TURTLEBOT_3D_SENSOR` line in the `.bashrc` file.
-
-* [ ] Launch the `turtlebot_gazebo` package and hopefully, you should see your new turtlebot with enhanced superpowers like below and you should be able to see the scan data in the `/laserscan` topic.
 
 
 #### Create Catkin Workspace
@@ -96,7 +94,7 @@ source ~/.bashrc
 
 ### Install the Project 
 
-Instructions about howto install the project onto your machine.
+Instructions about how to install the project onto your machine.
 
 #### Clone and build the Project Repository
 
@@ -110,7 +108,7 @@ catkin_make
 
 ### Run the Project
 
-Instructions about howto run the project on your machine.
+Instructions about how to run the project on your machine.
 
 #### Prepare Gazebo and Run the Project
 
@@ -145,7 +143,8 @@ Evaluate the laser data to find the best suitable wall, turn the robot in its di
 1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (offset). 
 Connected data points are determined based on a threshold of their distance from each other.
 
-The picture below shows an example of classified data points marked with a frame.
+The image below shows an example of classified data points marked with a frame.
+Notice that small data points groups smaller than 20 are ignored by further algorithmns (marked by white dotted frame).
 
 ![Classified Datapoints](readme_files/classifiedDatapoints.png)
 
@@ -156,7 +155,7 @@ This approach makes it very likely that a data point group referring to a wall i
 1. Get absolute index of the middle point from the chosen data point group.
 1. Calculate the required rotation of the robot in degree to face this middle data point.
 1. Let the robot rotate based on `/odom` quaternion data. The quaternion data must be converted into degree for doing so.
-1. Approach the wall until a distance from the wall threshold is reached, then stop.
+1. Approach the wall until a threshold distance from the wall is reached, then stop.
 
 ![Search and Approach Wall](readme_files/searchApproachWall.gif)
 
