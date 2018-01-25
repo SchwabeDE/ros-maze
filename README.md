@@ -9,13 +9,14 @@ The project is developed in Python language, using the Robot Operation System (R
 
 - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
-        - [Step 1 Native ROS on your System](#step-1-native-ros-on-your-system)
-        - [Step 2 Mount Hokuyo Laser Scanner onto the Turtlebot](#step-2-mount-hokuyo-laser-scanner-onto-the-turtlebot)
-        - [Step 3 Create Catkin Workspace](#step-3-create-catkin-workspace)
+        - [Native ROS on your System](#native-ros-on-your-system)
+        - [Turtlebot and Git](#turtlebot-and-git)
+        - [Mount Hokuyo Laser Scanner onto the Turtlebot](#mount-hokuyo-laser-scanner-onto-the-turtlebot)
+        - [Create Catkin Workspace](#create-catkin-workspace)
     - [Install the Project](#install-the-project)
-        - [Step 4 Clone and build the Project Repository](#step-4-clone-and-build-the-project-repository)
+        - [Clone and build the Project Repository](#clone-and-build-the-project-repository)
     - [Run the Project](#run-the-project)
-        - [Step 5 Prepare Gazebo and Run the Project](#step-5-prepare-gazebo-and-run-the-project)
+        - [Prepare Gazebo and Run the Project](#prepare-gazebo-and-run-the-project)
 - [Project Goal](#project-goal)
 - [Functional Principle](#functional-principle)
     - [Search and Approach Wall](#search-and-approach-wall)
@@ -35,13 +36,23 @@ These instructions will guide you step by step how the get this project running 
 
 Instructions in order to satisfy the prerequisites for installing the project.
 
-#### Step 1 Native ROS on your System
+#### Native ROS on your System
 
 **Warning! Please use Ubuntu 16.04 as this is the Long Term Support Version (LTS). If you are using Ubuntu 17.04 you have to use ROS Lunar release on your own risk!**
 
 * Goto http://wiki.ros.org/kinetic/Installation/Ubuntu and follow the instructions there. The installation can take some time depending on your internet connection.
 
-#### Step 2 Mount Hokuyo Laser Scanner onto the Turtlebot
+#### Turtlebot and Git
+
+* Install git and the turtlebot:
+
+```
+sudo apt-get update
+sudo apt-get install git
+sudo apt-get install ros-kinetic-turtlebot-simulator
+```
+
+#### Mount Hokuyo Laser Scanner onto the Turtlebot
 
 With the following instructions the Hokuyo Laser Scanner is mounted on the Turtlebot. 
 After following these instructions, you should be able to visualise the laser ray projections in gazebo, 
@@ -170,7 +181,6 @@ The robot must detect and follow the wall. It must circuit any object on its way
 **Follow wall or other elements until obstacle in front:**
 1. Split the laser data into equal sized groups. 
 Then determine the *target group* based on the wall follow direction (left/right) and get its minimum distance to an object (wall/obstacle).
-1. Implement a *PID controller* (external code) in a second python-file.
 1. Initialize the PID controller with the desired wall distance set point. 
 Let it then determine the control variable by updating it with the current minimum object distance value. 
 The control variable is then used for the robot rotation. The forward robot speed is a constant value.
@@ -195,7 +205,7 @@ The circle detection recognizes this and lets the robot move to a disconnected p
 
 #### Steps:
 
-1. Save absolute robot position based on `odom` data in a list whenever the robot enters the *Follow Wall* phase.
+1. Save absolute robot position based on `/odom` data in a list whenever the robot enters the *Follow Wall* phase.
 1. Continuously check the current robot position with the saved position points. A margin must be added to the saved data points for easing detection.
 1. Ensure that the robot is not immediately detected but has to leave the saved position point first.
 1. If a circle is detected, turn the robot 45° away from the current following wall/object and goto phase *Search and Approach Wall*
