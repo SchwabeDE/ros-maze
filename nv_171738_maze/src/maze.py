@@ -1,12 +1,23 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # coding=utf-8
+# ==============================================================================
+# title           :maze.py
+# description     :The purpose of this project is to enable a robot to compete in the Maze Challenge.
+#                  In this challenge, a turtlebot must independently find outside a previously unknown maze.
+#                  For maze wall and object recognition, a Hokuyo Laser Scanner is mounted to the turtlebot.
+#                  The project is developed in Python language, using the Robot Operation System (ROS).
+# author          :Nico Vinzenz
+# date            :20180126
+# version         :1.0
+# python_version  :3.5
+# ==============================================================================
 
-# import dependencies
+# Import dependencies
 import rospy
 import PID
 from tf.transformations import euler_from_quaternion
 
-# import messages
+# Import messages
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
@@ -40,6 +51,8 @@ class Robot:
         self.phase = "SearchApproachWall"
         # Possible values = "left", "right"
         self.followWallDirection = "right"
+
+        # CIRCLE DETECTION AND REPOSITION
         self.circleDetectionPositionList = []
         self.prevCircleDetected = True
         self.currCircleDetected = True
@@ -82,7 +95,7 @@ class Robot:
         """
         Classify the data points obtained from the laser scanner into sublists containing points which are close to eachother.
         For each sublist, the absolute index of its first entry and also average + standard deviation information is added.
-        :param ptpDistanceThreshold: Determines the distance for grouping data points together.
+        :param ptpDistanceThreshold: Determines the distance in m for grouping data points together.
         :return: Array of classified data points together with meta data. 
                  Format: datapointGroups[ datapointGroup[rangeList, relativeIdx, average, standardDeviation] ]
         """
@@ -122,7 +135,7 @@ class Robot:
         idxBestScore = 0
         for idx, datapointGroup in enumerate(datapointGroups):
             if (len(datapointGroup[0]) >= minPointsThreshold):
-                # Number of datapoints and average must be normalized
+                # Number of datapoints (scoreLen) and average (scoreAvg) must be normalized
                 scoreLen = len(datapointGroup[0]) / float(len(self.laser))
                 scoreAvg = datapointGroup[2] / max(self.laser)
                 scoreStd = 1.0 - datapointGroup[3]
@@ -150,13 +163,13 @@ class Robot:
         """
         orientation = self.odom.orientation
         orientationList = [orientation.x, orientation.y, orientation.z, orientation.w]
-        # rad from quaternion
+        # Ead from quaternion
         (roll, pitch, yaw) = euler_from_quaternion(orientationList)
-        # degree from rad
+        # Degree from rad
         pi = 3.14159265359
         yawDegree = (180 / pi) * yaw
 
-        # transform [-180;180] degree into [0;359]
+        # Transform [-180;180] degree into [0;359]
         if (yawDegree < 0):
             yawDegree = 359 + yawDegree
 
@@ -333,8 +346,6 @@ class Robot:
         """
 
         # Init PID
-        # previously best tested Values #1: P=0.5, I=0.0, D=1.6
-        # previously best tested Values #2: P=0.6, I=0.0, D=1.4
         P = 0.6
         I = 0
         D = 1.4
@@ -421,6 +432,7 @@ class Robot:
 
         if (self.currCircleDetected and not self.prevCircleDetected):
             # Only return True on a rising edge
+            rospy.loginfo("Circle detected!")
             return True
         else:
             return False
@@ -453,6 +465,7 @@ class Robot:
         while not (self.laser and self.odom):
             # Required because these data are provided with some delay.
             rospy.loginfo("Wait for laser and odom data..")
+            self.rate.sleep()
 
         while not rospy.is_shutdown():
             if (self.phase == "SearchApproachWall"):
@@ -499,7 +512,7 @@ class Robot:
 "MAIN FUNCTION"
 
 if __name__ == "__main__":
-    # instantiates your class and calls the __init__ function
+    # Instantiates your class and calls the __init__ function
     robot = Robot()
 
     robot.startRobot()
