@@ -136,7 +136,7 @@ The goal of this project is to escape out of a previously unknown maze.
 The robot spawns somewhere inside this maze and must leave it without bumping against a wall or any other object.
 It is not necessary for the robot to stop once it left the maze.
 
-Below is a screenshot showing an example maze. The goal is depicted as a red cross.
+_Below is a screenshot showing an example maze. The goal is depicted as a red cross._
 
 ![Project Goal](readme_files/goal.png)
 
@@ -151,20 +151,20 @@ This section describes the internal algorithms used in this project.
 Evaluate the laser data to find the best suitable wall, turn the robot in its direction, approach it and stop in front of it.
 
 #### Steps:
-1. Get laser data from topic `/laserscan` 
-1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (offset). 
+1. Get laser data from topic `/laserscan`.
+1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (global index). 
 Connected data points are determined based on a threshold of their distance from each other.
 
-    The image below shows an example of classified data points marked with a frame.
-Notice that data point groups smaller than 20 are ignored by further algorithmns (marked with white dotted frame).<br />
+    _The image below shows an example of classified data points marked with a frame.
+Notice that data point groups smaller than 20 are ignored by further algorithmns (marked with white dotted frame)._<br />
 ![Classified Datapoints](readme_files/classifiedDatapoints.png)
-1. Calculate the relative index of the first element (regarding all laserscan values), 
-average (arithmetic mean) and standard deviation of each data point group and add to list.
+1. Calculate the average (arithmetic mean) and standard deviation of each data point group and add to list.
 1. Choose list with preferably most elements, furthermost average distance and lowest standard deviation.
 This approach makes it very likely that a data point group referring to a wall instead of another object is chosen.
-1. Get absolute index of the middle point from the chosen data point group.
+1. Get absolute index of the middle point from the chosen data point group.<br />
+_The cyan arrow in the image above depicts an example for a chosen data point out of all groups._
 1. Calculate the required rotation of the robot in degree to face this middle data point.
-1. Let the robot rotate based on `/odom` quaternion data. The quaternion data must be converted into degree for doing so.
+1. Let the robot rotate based on `/odom` quaternion data. The quaternion data is converted into degree for easier handling.
 1. Approach the wall until a threshold distance from the wall is reached, then stop.
 
 ![Search and Approach Wall](readme_files/searchApproachWall.gif)
@@ -172,33 +172,42 @@ This approach makes it very likely that a data point group referring to a wall i
 ### Follow Wall
 
 #### Summary:
-The robot must detect and follow the wall. It must circuit any object on its way. Further it must retain the same distance to the wall/obstacles by using a PID controller. 
+The robot detects and follows the wall. It circuits any object on its way. 
+The same distance to the wall or an object is thereby retained.
+This is implemented by a PID controller which adjusts the robot rotation based on distance laser data.
 
 #### Steps:
 
 **Follow wall or other elements until obstacle in front:**
 1. Split the laser data into equal sized groups. 
-Then determine the *target group* based on the wall follow direction (left/right) and get its minimum distance to an object (wall/obstacle).
-1. Initialize the PID controller with the desired wall distance set point. 
-Let it then determine the control variable by updating it with the current minimum object distance value. 
-The control variable is then used for the robot rotation. The forward robot speed is a constant value.
+Then determine the *target group* among these based on the wall follow direction (left/right). 
+Get the minimum distance to an object (wall or obstacle) of the target group (_see image below_).<br />
+![Target Group](readme_files/followWallTargetGroup.png)
+1. Initialize the PID controller with the desired wall distance set point _r(t)_. P, I and D values are determined based on trial and error.
+Let it then determine the control variable _u(t)_ by updating it with the current minimum object distance value _y(t)_. 
+The control variable _u(t)_ is then used for the robot rotation. The forward robot speed is a constant value.
+
+    The image below shows the structure of a PID controller.<br />
+![PID Controller](readme_files/pid_controller.png)
 
 ![Follow Wall until Obstacle](readme_files/followWallUntilObstacle.gif)
 
 **Align the robot when obstacle is in front:**
-1. Get laser values from the middle and determine the minimum distance of the closest object in front of the robot.
+1. Get laser values from the middle and determine the minimum distance of the closest object in front of the robot (_see image below_).<br />
+![Target Group](readme_files/followWallObstacleInFront.png)
 1. Align the robot when an obstacle is closer than the desired wall distance.
 First split the laser data into equal sized groups and determine the target group based on the wall follow direction. 
 Then determine the index of the group with the smallest average distance and also the previous and current average distance of the target group.
-In order to achieve an approximately 90° angle to the obstacle, 
-let the robot rotate until the index of the smallest group equals the index of the target group and the previous average distance of the target group is bigger than its current average distance.
+1. In order to achieve an approximately 90° angle to the obstacle, 
+let the robot rotate until the index of the smallest group equals the index of the target group 
+and the previous average distance of the target group is bigger than its current average distance.
 
 ![Allign Robot to Obstacle](readme_files/allignRobotToObstacle.gif)
 
 ### Circle Detection and Repositioning
 
 #### Summary:
-It may happen that the robot follows a wall/object which is isolated from the remaining maze, thus letting the robot move in circles and making it unable to leave the maze. 
+It may happen that the robot follows a wall or object which is isolated from the remaining maze, thus letting the robot move in circles and making it unable to leave the maze. 
 The circle detection recognizes this and lets the robot move to a disconnected part of the maze.
 
 #### Steps:
@@ -206,7 +215,7 @@ The circle detection recognizes this and lets the robot move to a disconnected p
 1. Save absolute robot position based on `/odom` data in a list whenever the robot enters the *Follow Wall* phase.
 1. Continuously check the current robot position with the saved position points. A margin must be added to the saved data points for easing detection.
 1. Ensure that the robot is not immediately detected but has to leave the saved position point first.
-1. If a circle is detected, turn the robot 45° away from the current following wall/object and goto phase *Search and Approach Wall*
+1. If a circle is detected, turn the robot 45° away from the currently followed object and go to phase *Search and Approach Wall*
 
 ![Circle Detection and Repositioning](readme_files/circleDetectionAndRepositioning.gif)
 
@@ -221,7 +230,7 @@ The laser data is split in the middle into two groups. The robot will then follo
 1. Split laser data into two groups and get their maximum value.
 1. Set the wall follow direction according to the group with the biggest maximum value.
 
-In the image below you can see the maximum value in the left group, therefore the robot will initially follow the wall to the left.
+_In the image below you can see the maximum value in the left group, therefore the robot will initially follow the wall to the left._
 
 ![Follow Wall Direction Heuristic](readme_files/followWallDirectionHeuristic.png)
 
