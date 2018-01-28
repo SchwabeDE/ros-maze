@@ -86,7 +86,7 @@ and you will have a new stable topic that gets the laser data from the new scann
   the `export TURTLEBOT_3D_SENSOR` line in the `.bashrc` file.
 
 
-#### Step 3 Create Catkin Workspace
+#### Create Catkin Workspace
 
 All your ROS packages must be stored in a special folder called __catkin workspace__.
 ROS uses the [catkin](http://docs.ros.org/api/catkin/html/) build system to manage your codebase.
@@ -107,7 +107,7 @@ source ~/.bashrc
 
 Instructions about how to install the project onto your machine.
 
-#### Step 4 Clone and build the Project Repository
+#### Clone and build the Project Repository
 
 * Clone the project into the catkin workspace and build it:
 
@@ -121,7 +121,7 @@ catkin_make
 
 Instructions about how to run the project on your machine.
 
-#### Step 5 Prepare Gazebo and Run the Project
+#### Prepare Gazebo and Run the Project
 
 * Launch the simunlation environment gazebo, load a maze into gazebo and launch the project package (nv_171738_maze).
 ```
@@ -155,11 +155,9 @@ Evaluate the laser data to find the best suitable wall, turn the robot in its di
 1. Classify connected data points in single sublists. Each sublist contains a list of distance values and the original index value of the first entry (offset). 
 Connected data points are determined based on a threshold of their distance from each other.
 
-The image below shows an example of classified data points marked with a frame.
-Notice that small data points groups smaller than 20 are ignored by further algorithmns (marked by white dotted frame).
-
+    The image below shows an example of classified data points marked with a frame.
+Notice that data point groups smaller than 20 are ignored by further algorithmns (marked with white dotted frame).<br />
 ![Classified Datapoints](readme_files/classifiedDatapoints.png)
-
 1. Calculate the relative index of the first element (regarding all laserscan values), 
 average (arithmetic mean) and standard deviation of each data point group and add to list.
 1. Choose list with preferably most elements, furthermost average distance and lowest standard deviation.
