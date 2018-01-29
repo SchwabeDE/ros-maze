@@ -3,7 +3,7 @@
 The purpose of this project is to enable a robot to compete in the Maze Challenge. 
 In this challenge, a turtlebot must independently find outside a previously unknown maze. 
 For maze wall and object recognition, a Hokuyo Laser Scanner is mounted to the turtlebot.
-The project is developed in Python language, using the Robot Operation System (ROS).
+The project is developed in Python language, using the Robot Operating System (ROS).
 
 ## Table of Contents
 
@@ -30,7 +30,7 @@ The project is developed in Python language, using the Robot Operation System (R
 
 ## Getting Started
 
-These instructions will guide you step by step how the get this project running on your machine.
+These instructions will guide you step by step how to get this project running on your machine.
 
 ### Prerequisites
 
@@ -40,7 +40,7 @@ Instructions in order to satisfy the prerequisites for installing the project.
 
 **Warning! Please use Ubuntu 16.04 as this is the Long Term Support Version (LTS). If you are using Ubuntu 17.04 you have to use ROS Lunar release on your own risk!**
 
-* Goto http://wiki.ros.org/kinetic/Installation/Ubuntu and follow the instructions there. The installation can take some time depending on your internet connection.
+* Go to http://wiki.ros.org/kinetic/Installation/Ubuntu and follow the instructions there. The installation can take some time depending on your internet connection.
 
 #### Turtlebot and Git
 
@@ -119,11 +119,12 @@ catkin_make
 
 ### Run the Project
 
-Instructions about how to run the project on your machine.
+Finally the instructions to run the project on your machine.
 
 #### Prepare Gazebo and Run the Project
 
-* Launch the simunlation environment gazebo, load a maze into gazebo and launch the project package (nv_171738_maze).
+* Launch the simulation environment gazebo, load a maze into gazebo and launch the project package (nv_171738_maze).
+
 ```
 roslaunch turtlebot_gazebo turtlebot_world.launch
 rosrun gazebo_ros spawn_model -file ~/catkin_ws/src/nv-171738_tier4/maze_practice/model.sdf -sdf -model -maze -x 16 -y 5
@@ -142,7 +143,7 @@ _Below is a screenshot showing an example maze. The goal is depicted as a red cr
 
 ## Functional Principle
 
-This section describes the internal algorithms used in this project.
+This section describes the internal algorithms used in this project for controlling the robot.
 
 ### Search and Approach Wall
 
@@ -156,13 +157,13 @@ Evaluate the laser data to find the best suitable wall, turn the robot in its di
 Connected data points are determined based on a threshold of their distance from each other.
 
     _The image below shows an example of classified data points marked with a frame.
-Notice that data point groups smaller than 20 are ignored by further algorithmns (marked with white dotted frame)._<br />
+Notice that data point groups smaller than 20 are ignored by further algorithms (marked with white dotted frame)._<br />
 ![Classified Datapoints](readme_files/classifiedDatapoints.png)
 1. Calculate the average (arithmetic mean) and standard deviation of each data point group and add to list.
 1. Choose list with preferably most elements, furthermost average distance and lowest standard deviation.
 This approach makes it very likely that a data point group referring to a wall instead of another object is chosen.
 1. Get absolute index of the middle point from the chosen data point group.<br />
-_The cyan arrow in the image above depicts an example for a chosen data point out of all groups._
+_The cyan arrow in the image above depicts an example for a chosen data point among all groups._
 1. Calculate the required rotation of the robot in degree to face this middle data point.
 1. Let the robot rotate based on `/odom` quaternion data. The quaternion data is converted into degree for easier handling.
 1. Approach the wall until a threshold distance from the wall is reached, then stop.
@@ -202,7 +203,7 @@ Then determine the index of the group with the smallest average distance and als
 let the robot rotate until the index of the smallest group equals the index of the target group 
 and the previous average distance of the target group is bigger than its current average distance.
 
-![Allign Robot to Obstacle](readme_files/allignRobotToObstacle.gif)
+![Align Robot to Obstacle](readme_files/alignRobotToObstacle.gif)
 
 ### Circle Detection and Repositioning
 
@@ -230,7 +231,8 @@ The laser data is split in the middle into two groups. The robot will then follo
 1. Split laser data into two groups and get their maximum value.
 1. Set the wall follow direction according to the group with the biggest maximum value.
 
-_In the image below you can see the maximum value in the left group, therefore the robot will initially follow the wall to the left._
+_In the image below you can see both groups separated by a white dotted line. 
+The maximum value is in the left group, therefore the robot will initially follow the wall to the left._
 
 ![Follow Wall Direction Heuristic](readme_files/followWallDirectionHeuristic.png)
 
