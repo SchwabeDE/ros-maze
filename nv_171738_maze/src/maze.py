@@ -69,7 +69,8 @@ class Robot:
 
     def laserCallback(self, data):
         """
-        Get relevant laserscan data (relevant sublist: ranges -> array of distances with 360 elements, spanning 180° degree). 
+        Get relevant laserscan data (relevant sublist: ranges -> array of distances with 360 elements, 
+        spanning 180° degree). 
         :param data: /laserscan topic data
         :return: void
         """
@@ -93,8 +94,10 @@ class Robot:
 
     def classifyDatapoints(self, ptpDistanceThreshold=0.1):
         """
-        Classify the data points obtained from the laser scanner into sublists containing points which are close to eachother.
-        For each sublist, the absolute index of its first entry and also average + standard deviation information is added.
+        Classify the data points obtained from the laser scanner into sublists containing points which are close to 
+        eachother.
+        For each sublist, the absolute index of its first entry and also average 
+        + standard deviation information is added.
         :param ptpDistanceThreshold: Determines the distance in m for grouping data points together.
         :return: Array of classified data points together with meta data. 
                  Format: datapointGroups[ datapointGroup[rangeList, relativeIdx, average, standardDeviation] ]
@@ -229,7 +232,8 @@ class Robot:
 
     def getMinMiddleDatapoints(self, numberDatapointsFromMiddle):
         """
-        Takes the specified amount of range data points from the middle laser scanner data and returns the minimal value.
+        Takes the specified amount of range data points from the middle laser scanner data 
+        and returns the minimal value.
         :param numberDatapointsFromMiddle: Number of data points to use from the laser sensor middle.
         :return: Smallest range data point in specified interval.
         """
@@ -278,7 +282,7 @@ class Robot:
         """
         return sum(datapoints) / float(len(datapoints))
 
-    def allignToWall(self, numberDatapointsFromSide):
+    def alignToWall(self, numberDatapointsFromSide):
         """
         Rotates the robot until it is approximately facing in a 90° angle away from the wall.
         This angle is determined by using the sensor data of the robot sides.
@@ -393,7 +397,7 @@ class Robot:
                 self.vel.linear.x = 0
                 self.velPub.publish(self.vel)
 
-                self.allignToWall(numberDatapointsFromSide)
+                self.alignToWall(numberDatapointsFromSide)
 
             self.velPub.publish(self.vel)
             self.rate.sleep()
@@ -425,9 +429,10 @@ class Robot:
         self.currCircleDetected = False
 
         for pos in self.circleDetectionPositionList:
-            # Both currX and currY must be inside the intervall [savedPoint - distanceMargin; savedPoint + distanceMargin]
-            if (pos[0] - distanceMargin <= currX and pos[0] + distanceMargin >= currX
-                and pos[1] - distanceMargin <= currY and pos[1] + distanceMargin >= currY):
+            # Both currX and currY must be inside the interval
+            # [savedPoint - distanceMargin; savedPoint + distanceMargin]
+            if (pos[0] - distanceMargin <= currX <= pos[0] + distanceMargin
+                and pos[1] - distanceMargin <= currY <= pos[1] + distanceMargin):
                 self.currCircleDetected = True
 
         if (self.currCircleDetected and not self.prevCircleDetected):
